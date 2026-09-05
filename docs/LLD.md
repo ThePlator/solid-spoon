@@ -209,7 +209,7 @@ flowchart TD
     RT --> FEED
     FEED --> SB & TF & CARD & ADD
     CARD --> DETAIL
-    FEED -->|subscribeFeed| CoreDB[(@supermind/core → Firestore)]
+    FEED -->|subscribeFeed| CoreDB[("@supermind/core → Firestore")]
     SB -->|searchSaves| CoreDB
     TF -->|filterByTag| CoreDB
     ADD -->|createSave| CoreDB
@@ -235,7 +235,7 @@ sequenceDiagram
     participant P as Popup
     participant CS as Content script
     participant BG as Service worker
-    participant Core as @supermind/core
+    participant Core as Core SDK
     P->>CS: request page context
     CS-->>P: {title, url, ogImage, selection}
     P->>P: user adds note/tags, clicks Save
@@ -259,9 +259,9 @@ Expo config: `expo-share-intent` (or a config plugin) to wire the native share t
 
 ```mermaid
 flowchart LR
-    OtherApp["Instagram / YouTube / Browser"] -->|Share →| SI[Share Intent handler]
+    OtherApp["Instagram / YouTube / Browser"] -->|Share| SI[Share Intent handler]
     SI --> SHEET[Save sheet]
-    SHEET -->|createSave + fetchMetadata| Core[(@supermind/core → Firestore)]
+    SHEET -->|createSave + fetchMetadata| Core[("@supermind/core → Firestore")]
     FAB[Quick Capture FAB] --> NOTE[Note box] -->|createSave note| Core
     LIB[Library screen] -->|subscribeFeed| Core
 ```

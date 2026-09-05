@@ -89,7 +89,7 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
-    participant C as Client (ext / mobile)
+    participant C as Client ext-mobile
     participant FN as Cloud Function<br/>fetchMetadata
     participant Site as Source page
     participant FS as Firestore
