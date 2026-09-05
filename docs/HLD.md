@@ -131,7 +131,28 @@ The library subscribes to `users/{uid}/saves` ordered by `createdAt desc`. Keywo
 
 ---
 
-## 6. Environments & deployment (high level)
+## 6. Architecture risks & mitigations (the no-server trade-off)
+
+Going client → Firebase directly with **no API tier** is the biggest bet in this design. It's what makes v1 cheap and fast to build, but it moves certain responsibilities onto Security Rules, Cloud Functions, and you. Each row is one dimension of that trade-off.
+
+| Dimension | ✅ Benefit | ⚠️ Risk | 🛠️ What to do |
+|---|---|---|---|
+| **Backend code** | No server to build, deploy, or operate — Firebase is auth + DB + sync + storage in one | Security Rules *are* your only enforcement; one wrong rule exposes all data (config is public) | Keep the `users/{uid}/saves` nesting; write **rules unit tests** with the emulator; never deploy rules untested |
+| **Input validation** | Ship faster — no request-validation layer to write | Client can write oversized/malformed/spoofed docs; only rules can stop it | Extend `isValidSave()` with size/length/field limits; accept rules can't cover complex logic in v1 |
+| **Sync** | Real-time cross-device sync "for free" via Firestore listeners | Live listeners re-read on every change — a runaway listener silently multiplies cost | Always `limit()` + paginate the feed; watch the usage dashboard |
+| **Cost** | Free tier easily covers single-user v1 | Billed per read; no server to cache/throttle; cost scales with reads, not users | Set a **budget alert**; paginate; profile read counts before multi-user |
+| **Abuse / rate limiting** | Nothing to configure to start | No natural chokepoint — anyone with your config can hit Firestore/Functions directly | Enable **Firebase App Check**; cap Function concurrency/timeout |
+| **Search & queries** | No query layer to build | Firestore only: no full-text, no `OR`, no joins, no aggregation | Use `searchTokens` + `array-contains` for v1; plan Algolia/Typesense for v2 |
+| **Complex / secret logic** | Simple flows need zero server | Anything atomic, secret-bearing, or external-API-based can't run on the client | Put it in **Cloud Functions** (already done for `fetchMetadata`); expect Functions to grow into the backend for Tier 2 |
+| **Speed to ship** | Weeks, not months — one skillset across all clients | You're *deferring* a backend, not avoiding it | Fine for v1; treat rules with the seriousness of server auth code |
+| **Portability** | Move fast now on a proven platform | Vendor lock-in: rules, query model, SDK are Firebase-specific — leaving is a rewrite | Keep data logic in `@supermind/core` so clients are insulated; accept lock-in as a conscious v1 trade |
+| **Schema changes** | Schemaless — *adding* fields needs no migration | *Changing* existing data has no migration layer — it's on you | Write one-off backfill scripts/Functions when you rename or reshape fields |
+
+**Bottom line:** for a single-player, low-traffic v1 where speed matters most, this is the right call. Only two rows can hurt you *today* — **Security Rules correctness** and **runaway reads/cost** — and both are cheap to defend. Everything else is a "when you go multi-user or build Tier 2" concern. You're not avoiding a backend; you're **deferring** it — Cloud Functions + Security Rules gradually *become* the backend as the product grows.
+
+---
+
+## 7. Environments & deployment (high level)
 
 ```mermaid
 flowchart LR
@@ -157,7 +178,7 @@ flowchart LR
 
 ---
 
-## 7. Architecture decisions (summary)
+## 8. Architecture decisions (summary)
 
 | # | Decision | Why | Alternative rejected |
 |---|---|---|---|
@@ -170,6 +191,6 @@ flowchart LR
 
 ---
 
-## 8. Out of scope for v1 (see PRD §13)
+## 9. Out of scope for v1 (see PRD §13)
 
 AI (tagging/summaries/semantic search), voice/OCR, Reddit/LinkedIn comment capture, resurfacing/digests/connections, sharing/collaboration, and any hand-rolled backend. The architecture is deliberately additive so these can land later without restructuring.
