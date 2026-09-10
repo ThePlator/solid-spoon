@@ -9,14 +9,16 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 ## Phase 0 — Foundation (backend + sync)
 *Goal: an item written by one client is readable by another.*
 
-- [ ] Create Firebase project (Auth + Firestore, Storage optional)
-- [ ] Enable Email/Password auth
-- [ ] Set up repo scaffolding (monorepo: `web/`, `extension/`, `mobile/`, `packages/core/`)
-- [ ] Add open-source hygiene files: `LICENSE` (MIT), `.gitignore`, `.env.example`
-- [ ] Write `firestore.rules` (per-user isolation) + unit test with the emulator
-- [ ] Write `firestore.indexes.json` (tags + searchTokens composite indexes)
-- [ ] Build `@supermind/core`: firebase init, `types.ts`, `auth.ts`, `saves.ts`, `tokens.ts`
-- [ ] Install & configure the Firebase Emulator Suite for local dev
+- [x] Create Firebase project (`second-brain-1f78f`, alias `brain`)
+- [ ] Enable Email/Password auth *(manual — Firebase console → Authentication)*
+- [~] Set up repo scaffolding (monorepo: `web/`, `extension/`, `mobile/`, `packages/core/`) — root `package.json` workspaces + `packages/core` done; client folders pending their phases
+- [x] Add open-source hygiene files: `LICENSE` (MIT), `.gitignore`, `.env.example`
+- [x] Write `firestore.rules` (per-user isolation) — done; ⏳ still needs emulator unit test
+- [x] Write `firestore.indexes.json` (tags + searchTokens composite indexes)
+- [x] Build `@supermind/core`: `firebase.ts`, `types.ts`, `auth.ts`, `saves.ts`, `tokens.ts`, `index.ts`
+- [x] Add `firebase.json` (rules + indexes + emulator ports)
+- [x] Deploy rules + indexes to `second-brain-1f78f` (`npm run deploy:rules`)
+- [ ] Install deps (`npm install`) and configure the Firebase Emulator Suite
 - [ ] **Prove sync:** throwaway button writes a save → appears on another client/tab
 - [ ] Decide: ship `fetchMetadata` Cloud Function now, or defer (extension reads DOM directly)?
 

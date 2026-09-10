@@ -1,0 +1,21 @@
+{
+  "name": "supermind",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A cross-platform second brain for capturing and retrieving content.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "web",
+    "extension",
+    "mobile"
+  ],
+  "scripts": {
+    "emulators": "firebase emulators:start --project demo-supermind",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "build:core": "npm run build --workspace @supermind/core"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  }
+}

@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// SuperMind — Firestore Security Rules
+// These rules ARE the backend's authorization layer. There is no server
+// tier, so a mistake here exposes data. Deploy only after unit-testing
+// with the Firebase Emulator Suite.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Everything lives under the owning user. A user can only ever touch
+    // their own subtree.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /saves/{saveId} {
+        allow read:   if isOwner(userId);
+        allow delete: if isOwner(userId);
+        allow create, update:
+          if isOwner(userId) && isValidSave(request.resource.data);
+      }
+    }
+
+    // ---- helpers ----
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isValidSave(d) {
+      return d.userId is string
+          && d.userId == request.auth.uid
+          && d.type in ['link', 'note', 'image']
+          && d.title is string        && d.title.size() <= 500
+          && d.text is string         && d.text.size() <= 20000
+          && d.tags is list           && d.tags.size() <= 50
+          && d.searchTokens is list   && d.searchTokens.size() <= 100
+          && d.createdAt is timestamp;
+    }
+  }
+}

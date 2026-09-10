@@ -1,0 +1,23 @@
+{
+  "name": "@supermind/core",
+  "version": "0.1.0",
+  "description": "Shared Firebase data layer for all SuperMind clients (web, extension, mobile).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "firebase": "^10.7.0 || ^11.0.0"
+  },
+  "devDependencies": {
+    "firebase": "^11.0.0",
+    "typescript": "^5.4.0"
+  }
+}
