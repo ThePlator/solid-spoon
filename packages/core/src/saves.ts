@@ -10,15 +10,17 @@ import {
   orderBy,
   limit as fbLimit,
   startAfter,
+  getDoc,
   getDocs,
   serverTimestamp,
   type DocumentData,
   type QueryDocumentSnapshot,
+  type DocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { getServices } from './firebase.js';
-import { buildSearchTokens, tokenizeQuery } from './tokens.js';
-import type { Save, NewSaveInput, SaveUpdate } from './types.js';
+import { getServices } from './firebase';
+import { buildSearchTokens, tokenizeQuery } from './tokens';
+import type { Save, NewSaveInput, SaveUpdate } from './types';
 
 /** Firestore collection ref for a given user's saves: users/{uid}/saves. */
 function savesCol(userId: string) {
@@ -27,7 +29,9 @@ function savesCol(userId: string) {
 }
 
 /** Map a Firestore snapshot to a typed Save. */
-function toSave(snap: QueryDocumentSnapshot<DocumentData>): Save {
+function toSave(
+  snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>
+): Save {
   const d = snap.data();
   return {
     id: snap.id,
@@ -44,6 +48,13 @@ function toSave(snap: QueryDocumentSnapshot<DocumentData>): Save {
     createdAt: d.createdAt ?? null,
     updatedAt: d.updatedAt ?? null,
   };
+}
+
+/** Fetch a single save by id, or null if it doesn't exist. */
+export async function getSave(userId: string, saveId: string): Promise<Save | null> {
+  const { db } = getServices();
+  const snap = await getDoc(doc(db, 'users', userId, 'saves', saveId));
+  return snap.exists() ? toSave(snap) : null;
 }
 
 /** Create a new save. Derives searchTokens and timestamps automatically. */

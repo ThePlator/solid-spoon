@@ -18,34 +18,42 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Build `@supermind/core`: `firebase.ts`, `types.ts`, `auth.ts`, `saves.ts`, `tokens.ts`, `index.ts`
 - [x] Add `firebase.json` (rules + indexes + emulator ports)
 - [x] Deploy rules + indexes to `second-brain-1f78f` (`npm run deploy:rules`)
-- [ ] Install deps (`npm install`) and configure the Firebase Emulator Suite
-- [ ] **Prove sync:** throwaway button writes a save → appears on another client/tab
+- [x] Register Web app + capture config
+- [x] **Prove sync:** save written in one tab appeared live in another (`sync-test.html`) ✔
+- [ ] Install deps (`npm install`) for the client builds
 - [ ] Decide: ship `fetchMetadata` Cloud Function now, or defer (extension reads DOM directly)?
+
+> **Phase 0 complete** — backend live, secured, and sync-proven on `second-brain-1f78f`.
 
 ## Phase 1 — Web library
 *Goal: a usable (if manual) second brain on desktop.*
 
-- [ ] Next.js app + Firebase config from `.env.local`
-- [ ] Auth: signup / login / logout + route guard
-- [ ] Feed page: live `subscribeFeed`, reverse-chronological cards
-- [ ] Manual "add save" (link + note) — proves the write path before the extension exists
-- [ ] Quick text capture box
-- [ ] Keyword search (`searchTokens` + `array-contains`)
-- [ ] Tag filter
-- [ ] Item detail view: full text, link out, edit tags/note, delete
-- [ ] Empty state that explains how to save the first item
-- [ ] Pagination (`limit` + infinite scroll)
+- [x] Next.js app + Firebase config from `.env.local`
+- [x] Auth: signup / login / logout + route guard
+- [x] Feed page: live `subscribeFeed`, reverse-chronological cards
+- [x] Manual "add save" (link + note) — proves the write path before the extension exists
+- [x] Quick text capture box (Note mode in composer)
+- [x] Keyword search (`searchTokens` + `array-contains`)
+- [x] Tag filter (auto-generated chips)
+- [x] Item detail view: full text, link out, edit tags/note, delete
+- [x] Empty state that explains how to save the first item
+- [ ] Pagination (`limit` + infinite scroll) — deferred to Phase 4 polish
+
+> **Phase 1 complete** — verified end-to-end in the browser against `second-brain-1f78f`. Only pagination deferred.
 
 ## Phase 2 — Browser extension (Chrome MV3)
 *Goal: saving from any page lands in the web library.*
 
-- [ ] MV3 `manifest.json` (activeTab, scripting, storage; action popup)
-- [ ] Content script: read title, canonical URL, `og:image`, selected text
-- [ ] Popup (React): preview + note/tags + Save button
-- [ ] Auth handoff between extension and hosted web login
-- [ ] Service worker: perform the Firestore write
-- [ ] Keyboard shortcut to save
-- [ ] Load unpacked & verify saves appear in the web library
+- [x] MV3 `manifest.json` (activeTab, scripting; action popup + keyboard command)
+- [x] Page reader: title, canonical URL, `og:image`, selected text (via `chrome.scripting`, no content script needed)
+- [x] Popup (React): preview + editable title + note/tags + Save button
+- [x] Auth: popup has its own email/password login; Firebase persistence keeps session (simpler than web handoff)
+- [x] Write to Firestore via `@supermind/core` `createSave` (no service worker needed)
+- [x] Keyboard shortcut to open popup (Ctrl/Cmd+Shift+S)
+- [x] Build verified (`vite build` → loadable `dist/`)
+- [ ] **Load unpacked & verify** saves appear in the web library *(manual — needs your Chrome)*
+
+> **Phase 2 built** — `extension/dist/` ready to load unpacked. Chosen popup-login over web token handoff (LLD §7 open Q) for reliability.
 
 ## Phase 3 — Mobile app (React Native / Expo)
 *Goal: close the "save a reel while moving" loop.*

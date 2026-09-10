@@ -5,7 +5,7 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
-import { getServices } from './firebase.js';
+import { getServices } from './firebase';
 
 /** Create a new account with email + password. */
 export function signUp(email: string, password: string): Promise<User> {
