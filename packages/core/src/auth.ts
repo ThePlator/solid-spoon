@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut as fbSignOut,
   onAuthStateChanged,
   type User,
@@ -27,6 +28,12 @@ export function signIn(email: string, password: string): Promise<User> {
 export function signOut(): Promise<void> {
   const { auth } = getServices();
   return fbSignOut(auth);
+}
+
+/** Send a password-reset email to the given address. */
+export function resetPassword(email: string): Promise<void> {
+  const { auth } = getServices();
+  return sendPasswordResetEmail(auth, email);
 }
 
 /** The currently signed-in user, or null. */

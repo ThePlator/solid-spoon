@@ -334,3 +334,14 @@ textarea { resize: vertical; line-height: 1.5; }
   .lp-nav-links a:not(.lp-btn) { display: none; }
   .lp-openbox { padding: 28px; }
 }
+
+/* ── Auth extras: back button, forgot-password, success ──────── */
+.auth-wrap { position: relative; }
+.auth-back { position: absolute; top: 28px; left: 24px; font-family: var(--mono); font-size: 13px; color: var(--fg-2); }
+.auth-back:hover { color: var(--accent); }
+.auth-alt { margin-top: 18px; text-align: center; }
+.auth-alt a { font-family: var(--mono); font-size: 13px; color: var(--fg-2); }
+.auth-alt a:hover { color: var(--accent); }
+.auth-help { color: var(--fg-2); font-size: 14px; line-height: 1.5; margin: 0 0 4px; }
+.auth-success { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius); color: var(--fg); font-size: 14px; line-height: 1.5; padding: 16px; }
+.auth-success strong { color: var(--accent); }

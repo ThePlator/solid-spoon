@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { signIn, signUp } from '@supermind/core';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -35,6 +36,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-wrap">
+      <Link href="/" className="auth-back">← Back to home</Link>
       <div className="auth-card">
         <div className="auth-brand">
           <span className="logo">MIND<span className="sig">·</span>OS</span>
@@ -62,6 +64,12 @@ export default function LoginPage() {
             {busy ? 'Connecting…' : mode === 'signup' ? 'Boot my mind →' : 'Enter →'}
           </button>
         </form>
+
+        {mode === 'signin' && (
+          <div className="auth-alt">
+            <Link href="/forgot">Forgot your password?</Link>
+          </div>
+        )}
       </div>
     </div>
   );
