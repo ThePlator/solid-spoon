@@ -55,7 +55,7 @@ export default function ItemPage() {
     if (!user || !save) return;
     if (!confirm('Remove this entry from your book? This cannot be undone.')) return;
     await deleteSave(user.uid, save.id);
-    router.replace('/');
+    router.replace('/library');
   }
 
   if (loading || !user) return null;
@@ -63,7 +63,7 @@ export default function ItemPage() {
   if (notFound) {
     return (
       <div className="shell detail">
-        <Link href="/" className="back">← back to library</Link>
+        <Link href="/library" className="back">← back to library</Link>
         <div className="empty"><div className="glyph">∅</div><div className="mark">Entry not found</div><p>The entry you’re after doesn’t exist.</p></div>
       </div>
     );
@@ -73,7 +73,7 @@ export default function ItemPage() {
 
   return (
     <div className="shell detail">
-      <Link href="/" className="back">← back to library</Link>
+      <Link href="/library" className="back">← back to library</Link>
 
       <div className="detail-head">
         <span className="detail-type">{TYPE_LABEL[save.type]}</span>

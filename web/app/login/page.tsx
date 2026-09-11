@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace('/');
+    if (!loading && user) router.replace('/library');
   }, [user, loading, router]);
 
   async function submit(e: React.FormEvent) {
@@ -25,7 +25,7 @@ export default function LoginPage() {
     try {
       if (mode === 'signup') await signUp(email, password);
       else await signIn(email, password);
-      router.replace('/');
+      router.replace('/library');
     } catch (err) {
       setError(err instanceof Error ? err.message.replace('Firebase: ', '') : 'Something went wrong.');
     } finally {
