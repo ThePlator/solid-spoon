@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 
-const GITHUB_URL = 'https://github.com/ThePlator/supermind';
+const GITHUB_URL = 'https://github.com/ThePlator/solid-spoon';
 
 const SURFACES = [
   { tag: 'Web', title: 'Library', body: 'Browse, search, and organize everything you have saved in one reverse-chronological feed.' },
