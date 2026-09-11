@@ -1,144 +1,194 @@
-# 🧠 SuperMind
+# SuperMind
 
-**A cross-platform "second brain" for capturing and retrieving content.**
+A cross-platform "second brain" for capturing and retrieving content. Save links, articles, and ideas from any device and find them again with minimal friction. Built as an open-source, self-hosted application backed by a single managed Firebase project.
 
-Save anything worth remembering — reels, articles, blog posts, snippets, and spontaneous ideas — from any device, and find it again with zero friction. Built solo, open-sourced so anyone can clone it and run their own instance.
-
-> The product's job isn't just to *save* content (dozens of tools do that and become graveyards). Its job is to make saved content **reliably retrievable and worth returning to.**
+The product's goal is not merely to store content, but to keep it reliably retrievable, so a personal library does not decay into an unused archive.
 
 ---
 
-## ✨ What it does (v1)
+## Overview
 
-- **One-click save** from the browser (extension) or your phone (share sheet).
-- **Quick text capture** for raw ideas — no required fields.
-- **Unified library** — everything, all item types, newest first.
-- **Keyword search + tags** so nothing gets lost.
-- **Cross-device sync** — save on your phone, see it on the web instantly.
-- **Single-player** — your data, your account, no one else's.
+SuperMind ships as three client surfaces backed by one cloud service:
 
-See [`PRD-SuperMind.md`](PRD-SuperMind.md) for the full product spec, and [`docs/`](docs/) for architecture.
+- **Web library** — the primary interface for browsing, searching, and organizing saved items.
+- **Browser extension** — one-click saving of the current page while browsing on desktop.
+- **Mobile application** — capturing ideas on the go and saving shared content via the Android share sheet.
+
+All three clients share a single data layer and synchronize in real time through Cloud Firestore.
 
 ---
 
-## 🏗️ Architecture (short version)
+## Features (v1)
 
-Three thin clients, one **Firebase** backend, **no custom server**.
+- One-click save from the browser extension and mobile share sheet.
+- Quick text capture for unstructured ideas.
+- A unified, reverse-chronological library across all devices.
+- Keyword search across titles, text, and tags.
+- Manual tagging and tag-based filtering.
+- Real-time cross-device synchronization tied to a user account.
+- Email and password authentication with per-user data isolation.
+
+---
+
+## Architecture
+
+Three clients communicate directly with a single Firebase backend. There is no custom server; authorization is enforced by Firestore Security Rules.
 
 ```
-   Browser extension  ─┐
-                        ├──►  Firebase (Auth + Firestore + Storage + Functions)  ◄──  Web library (React)
-   Mobile app         ─┘
+Browser extension ─┐
+                   ├──► Firebase (Auth · Firestore · Storage · Functions) ◄── Web library
+Mobile application ─┘
 ```
 
-| Surface | Tech |
-|---|---|
-| Web library | Next.js (React) + Firebase JS SDK |
-| Browser extension | Chrome Manifest V3 + React popup |
-| Mobile app | React Native (Expo) |
-| Backend | Firebase: Auth (email/password), Cloud Firestore, Cloud Storage, Cloud Functions |
-| Shared logic | `@supermind/core` — one package all clients reuse |
+| Layer | Technology |
+| --- | --- |
+| Backend | Firebase: Authentication, Cloud Firestore, Cloud Storage, Cloud Functions |
+| Web library | Next.js (React) |
+| Browser extension | Chrome Manifest V3 |
+| Mobile application | React Native (Expo SDK 57) with React Navigation |
+| Shared data layer | `@supermind/core` — a single package consumed by all clients |
 
-Full detail: [`docs/HLD.md`](docs/HLD.md) (system design) and [`docs/LLD.md`](docs/LLD.md) (implementation spec).
+Refer to `docs/HLD.md` for the high-level design and `docs/LLD.md` for the implementation-level design, both of which include diagrams.
+
+### Repository layout
+
+```
+.
+├── packages/core/     Shared Firebase data layer (auth, saves, search tokens)
+├── web/               Next.js web library
+├── extension/         Chrome Manifest V3 extension
+├── mobile/            Expo (Android) application
+├── docs/              High- and low-level design documents
+├── firestore.rules    Security rules (per-user isolation)
+└── firestore.indexes.json
+```
 
 ---
 
-## 🚀 Getting started (run your own instance)
+## Prerequisites
 
-### Prerequisites
-- Node.js 20+
-- A free [Firebase](https://firebase.google.com/) account
-- (Optional) [Firebase CLI](https://firebase.google.com/docs/cli): `npm i -g firebase-tools`
+- Node.js 20 or later
+- A Firebase account (the free tier is sufficient for personal use)
+- Firebase CLI (`npm install -g firebase-tools`)
+- For the mobile application: the Expo Go app, or Android Studio for local native builds
 
-### 1. Clone & install
-```bash
+---
+
+## Getting started
+
+### 1. Clone and install
+
+```
 git clone https://github.com/<your-username>/supermind.git
 cd supermind
 npm install
 ```
 
-### 2. Create your Firebase project
-1. Go to the [Firebase Console](https://console.firebase.google.com/) → **Add project**.
-2. Enable **Authentication** → Sign-in method → **Email/Password**.
-3. Create a **Cloud Firestore** database (start in production mode).
-4. (Optional) Enable **Storage** if you want cached thumbnails.
-5. Project settings → **General** → add a **Web app** and copy the config.
+### 2. Create a Firebase project
 
-### 3. Configure your keys
-```bash
-cp .env.example .env.local
+1. In the [Firebase Console](https://console.firebase.google.com/), create a new project.
+2. Enable **Authentication** with the Email/Password sign-in method.
+3. Create a **Cloud Firestore** database in production mode.
+4. Register a **Web app** and copy the configuration values.
+
+### 3. Configure credentials
+
+Copy the example environment file and populate it with your Firebase web configuration:
+
 ```
-Fill in the values from your Firebase web config. **Never commit `.env.local`** — it's gitignored.
+cp .env.example web/.env.local
+```
 
-### 4. Deploy security rules & indexes
-```bash
+The Firebase web configuration is safe to expose in client code; security is enforced by Firestore Security Rules, not by keeping the configuration secret. Service-account keys and other secrets must never be committed.
+
+### 4. Deploy security rules and indexes
+
+```
 firebase login
-firebase use --add          # select your project
-firebase deploy --only firestore:rules,firestore:indexes
+firebase use --add
+npm run deploy:rules
 ```
-> These rules ([`firestore.rules`](firestore.rules)) scope every user to their own data. Deploy them **before** using the app — the default Firestore rules are either wide open or fully locked.
 
-### 5. Run the web app
-```bash
-npm run dev
+Deploy the rules before using the application. The default Firestore rules are either fully open or fully closed.
+
+### 5. Run the web library
+
 ```
-Open http://localhost:3000, sign up, and you have a working second brain.
+npm run dev --workspace web
+```
 
-### 6. (Optional) Load the browser extension
-1. `npm run build:extension`
-2. Chrome → `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the built `extension/` folder.
+The application is served at `http://localhost:3000`.
 
-### 7. (Optional) Run the mobile app
-```bash
+---
+
+## Browser extension
+
+```
+npm run build --workspace extension
+```
+
+Then load it in Chrome:
+
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Select **Load unpacked** and choose the `extension/dist` directory.
+
+Sign in through the popup once; the session persists across uses.
+
+---
+
+## Mobile application
+
+The mobile client uses Expo. Configure the Firebase values in `mobile/app.json` under `expo.extra`.
+
+Run in Expo Go (auth, library, and capture; the share sheet requires a native build):
+
+```
 cd mobile
-npx expo start
+npx expo start --go
 ```
-Scan the QR with Expo Go (dev), or build a standalone APK/IPA with EAS when ready.
+
+### Building an installable Android APK
+
+The APK is built in the cloud by EAS and requires a free Expo account. No local Android SDK is needed.
+
+```
+cd mobile
+npx eas-cli login
+npx eas-cli build -p android --profile preview
+```
+
+When the build completes, EAS provides a download link for the APK. The resulting build includes the full feature set, including share-sheet capture.
 
 ---
 
-## 💸 Cost
+## Cost
 
-Running your own instance is effectively **free**:
-
-| Item | Cost |
-|---|---|
-| Firebase (Auth + Firestore + Storage), single user | **$0** — well within the free tier |
-| Cloud Functions | **$0** — requires the Blaze plan (card on file) but stays inside the free allowance; can be skipped for v1 |
-| Web app on `localhost` or Firebase Hosting free tier | **$0** |
-| Browser extension (loaded unpacked, dev mode) | **$0** |
-| Android app (sideloaded APK) | **$0** |
-| iOS app on your own device | **$0** (free Apple ID, rebuild weekly) or **$99/yr** (Apple Developer Program) |
-
-**Total for solo self-host: ~$0/month.** Only native iOS carries an optional cost. See the cost breakdown in [`docs/HLD.md`](docs/HLD.md).
+Running a personal instance is effectively free. Firebase's free tier covers single-user usage of Authentication, Firestore, and Storage. Cloud Functions require the pay-as-you-go plan but remain within the free allowance at this scale. The only optional cost is an Apple Developer account for native iOS distribution, which does not apply to the Android build.
 
 ---
 
-## 🔒 Security & self-hosting notes
+## Security and self-hosting
 
-- **Firebase web config is safe to expose** (it's meant to ship in client code) — your security comes from [`firestore.rules`](firestore.rules), not from hiding the config.
-- **Never commit** service-account JSON keys, `google-services.json`, or `.env*` files — those grant admin access. They're in [`.gitignore`](.gitignore); keep them there.
-- Set a **budget alert** in the Google Cloud console if you enable Blaze, so a runaway query can't surprise you.
-- Consider enabling **Firebase App Check** before making an instance multi-user.
-
----
-
-## 🗺️ Roadmap
-
-- **v1 (current):** the capture → store → retrieve loop across web, extension, and mobile. Tracked in [`TODO.md`](TODO.md).
-- **v2:** AI auto-tagging & summaries, "ask your brain" search, Reddit whole-thread capture, voice capture. (Spec'd in the PRD, not built yet.)
-- **Later:** resurfacing/reminders, weekly digest, connections between saves, highlights.
-
-Explicitly **not** in v1: any AI, voice/OCR, Reddit/LinkedIn comment scraping, sharing/collaboration. See PRD §13.
+- The Firebase web configuration is intended to ship in client code; security is enforced by `firestore.rules`.
+- Never commit service-account keys, `google-services.json`, `GoogleService-Info.plist`, or `.env` files. These are excluded by `.gitignore`.
+- Deploy and unit-test Firestore Security Rules before exposing an instance.
+- Enable a budget alert and Firebase App Check before making an instance available to multiple users.
 
 ---
 
-## 🤝 Contributing
+## Roadmap
 
-This is a personal project shared openly. Fork it, clone it, adapt it to your needs. If you build something interesting on top, issues and PRs are welcome — but the v1 scope is deliberately small; please read the PRD before proposing features.
+Version 1 delivers the capture, storage, and retrieval loop across web, extension, and mobile. Planned subsequent work includes automated tagging and summarization, semantic search over the library, related-item connections, and resurfacing of older items. These are documented in `PRD-SuperMind.md` and are not part of the version 1 scope.
 
 ---
 
-## 📄 License
+## Contributing
 
-MIT — see [`LICENSE`](LICENSE). Use it, change it, ship it.
+This is a personal project released openly. Contributions are welcome, but the version 1 scope is intentionally narrow; please review `PRD-SuperMind.md` before proposing new features.
+
+---
+
+## License
+
+Released under the MIT License. See `LICENSE`.
