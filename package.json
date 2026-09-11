@@ -16,6 +16,7 @@
     "build:core": "npm run build --workspace @supermind/core"
   },
   "devDependencies": {
-    "firebase-tools": "^13.0.0"
+    "firebase-tools": "^13.0.0",
+    "sharp": "^0.35.4"
   }
 }

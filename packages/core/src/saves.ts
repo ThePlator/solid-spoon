@@ -32,7 +32,9 @@ function savesCol(userId: string) {
 function toSave(
   snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>
 ): Save {
-  const d = snap.data();
+  // Callers (getSave) guard on exists() first; the ?? {} satisfies the
+  // DocumentSnapshot type where data() may be undefined.
+  const d = (snap.data() ?? {}) as DocumentData;
   return {
     id: snap.id,
     userId: d.userId,

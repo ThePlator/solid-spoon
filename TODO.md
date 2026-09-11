@@ -1,95 +1,70 @@
 # ✅ SuperMind — Build TODO
 
-Tracks the v1 build. Ordered by phase — **finish a phase before starting the next.** The golden rule: always have one working thing. Backend → Web → Extension → Mobile.
+Tracks the build. **v1 (Tier 1) is complete** across all four surfaces. v2 (the AI
+intelligence layer) is next. See `PRD-SuperMind.md`, `docs/HLD.md`, `docs/LLD.md`,
+and `.claude/RULES.md`.
 
-Legend: `[ ]` todo · `[~]` in progress · `[x]` done
-
----
-
-## Phase 0 — Foundation (backend + sync)
-*Goal: an item written by one client is readable by another.*
-
-- [x] Create Firebase project (`second-brain-1f78f`, alias `brain`)
-- [ ] Enable Email/Password auth *(manual — Firebase console → Authentication)*
-- [~] Set up repo scaffolding (monorepo: `web/`, `extension/`, `mobile/`, `packages/core/`) — root `package.json` workspaces + `packages/core` done; client folders pending their phases
-- [x] Add open-source hygiene files: `LICENSE` (MIT), `.gitignore`, `.env.example`
-- [x] Write `firestore.rules` (per-user isolation) — done; ⏳ still needs emulator unit test
-- [x] Write `firestore.indexes.json` (tags + searchTokens composite indexes)
-- [x] Build `@supermind/core`: `firebase.ts`, `types.ts`, `auth.ts`, `saves.ts`, `tokens.ts`, `index.ts`
-- [x] Add `firebase.json` (rules + indexes + emulator ports)
-- [x] Deploy rules + indexes to `second-brain-1f78f` (`npm run deploy:rules`)
-- [x] Register Web app + capture config
-- [x] **Prove sync:** save written in one tab appeared live in another (`sync-test.html`) ✔
-- [ ] Install deps (`npm install`) for the client builds
-- [ ] Decide: ship `fetchMetadata` Cloud Function now, or defer (extension reads DOM directly)?
-
-> **Phase 0 complete** — backend live, secured, and sync-proven on `second-brain-1f78f`.
-
-## Phase 1 — Web library
-*Goal: a usable (if manual) second brain on desktop.*
-
-- [x] Next.js app + Firebase config from `.env.local`
-- [x] Auth: signup / login / logout + route guard
-- [x] Feed page: live `subscribeFeed`, reverse-chronological cards
-- [x] Manual "add save" (link + note) — proves the write path before the extension exists
-- [x] Quick text capture box (Note mode in composer)
-- [x] Keyword search (`searchTokens` + `array-contains`)
-- [x] Tag filter (auto-generated chips)
-- [x] Item detail view: full text, link out, edit tags/note, delete
-- [x] Empty state that explains how to save the first item
-- [ ] Pagination (`limit` + infinite scroll) — deferred to Phase 4 polish
-
-> **Phase 1 complete** — verified end-to-end in the browser against `second-brain-1f78f`. Only pagination deferred.
-
-## Phase 2 — Browser extension (Chrome MV3)
-*Goal: saving from any page lands in the web library.*
-
-- [x] MV3 `manifest.json` (activeTab, scripting; action popup + keyboard command)
-- [x] Page reader: title, canonical URL, `og:image`, selected text (via `chrome.scripting`, no content script needed)
-- [x] Popup (React): preview + editable title + note/tags + Save button
-- [x] Auth: popup has its own email/password login; Firebase persistence keeps session (simpler than web handoff)
-- [x] Write to Firestore via `@supermind/core` `createSave` (no service worker needed)
-- [x] Keyboard shortcut to open popup (Ctrl/Cmd+Shift+S)
-- [x] Build verified (`vite build` → loadable `dist/`)
-- [ ] **Load unpacked & verify** saves appear in the web library *(manual — needs your Chrome)*
-
-> **Phase 2 built** — `extension/dist/` ready to load unpacked. Chosen popup-login over web token handoff (LLD §7 open Q) for reliability.
-
-## Phase 3 — Mobile app (React Native / Expo)
-*Goal: close the "save a reel while moving" loop.*
-
-- [ ] Expo app + Firebase config
-- [ ] Auth screens (reuse `@supermind/core`)
-- [ ] Library screen: live feed list
-- [ ] Quick capture FAB → note in ≤2 taps
-- [ ] Share intent / share extension registered as a share target
-- [ ] Save sheet prefilled from shared URL/text
-- [ ] Build & run on device (Expo Go dev build → later sideload APK)
-
-## Phase 4 — Polish
-*Goal: pleasant to live in daily.*
-
-- [ ] Offline write queue (Firestore local persistence)
-- [ ] Duplicate detection by canonical URL (warn, don't block)
-- [ ] Multi-token search ranking tuning
-- [ ] Collections / better tag management
-- [ ] Thumbnail caching to Cloud Storage on `og:image` failure
-- [ ] Loading / error / `status:"error"` states everywhere
+Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
 ---
 
-## Open decisions to resolve early
-*(from PRD §12 and LLD §7 — flag at kickoff)*
+## ✅ v1 — COMPLETE
 
-- [ ] Extension ↔ web auth token sharing mechanism (before Phase 2)
-- [ ] Thumbnail policy: reference remote `og:image` vs. always cache to Storage
-- [ ] Auth providers: email/password only, or add Google/Apple? (Apple Sign-In becomes App-Store-mandatory if any social login exists)
-- [ ] Chrome-only, or Chrome + Firefox for the first extension release
-- [ ] Monorepo tooling: pnpm workspaces vs. turborepo
+### Phase 0 — Foundation (backend + sync)
+- [x] Firebase project `second-brain-1f78f` (Auth + Firestore)
+- [x] Email/Password auth enabled
+- [x] `firestore.rules` (per-user isolation + validation) + `firestore.indexes.json` — deployed
+- [x] `@supermind/core` shared data layer (auth, saves, tokens, RN-aware firebase init)
+- [x] Emulator config + open-source files (LICENSE, .gitignore, .env.example)
+- [x] Sync proven end-to-end
+
+### Phase 1 — Web library (Next.js)
+- [x] Auth + route guard, live feed, add (link/note), search, tags, detail/edit/delete, empty state
+- [x] "MIND·OS" design system (dark console, lime accent, Bricolage/Familjen/JetBrains fonts)
+- [x] Verified end-to-end in browser
+- [ ] Pagination / infinite scroll (deferred — `fetchFeedPage` already in core)
+
+### Phase 2 — Chrome extension (MV3)
+- [x] One-click save popup; reads title/canonical/og:image/selection via `chrome.scripting`
+- [x] Popup email/password login (Firebase persistence keeps session)
+- [x] Writes via `@supermind/core`; Ctrl/Cmd+Shift+S shortcut
+- [x] Build verified (`vite build` → loadable `extension/dist/`)
+- [ ] Load unpacked in your Chrome & save a real page *(manual)*
+
+### Phase 3 — Mobile app (Android · Expo SDK 57)
+- [x] Expo app + RN-adapted core (AsyncStorage auth persistence, long-polling)
+- [x] React Navigation: bottom tabs **Library / Capture / Profile** + stack for detail
+- [x] Login, live feed + search, capture (note/link), detail (edit/delete), profile (stats, sign out)
+- [x] Share-intent registered (Expo-Go-safe stub; real in APK build)
+- [x] **App icon + adaptive icon + splash screen** (MIND·OS mark) wired in `app.json`
+- [x] Runs on device via Expo Go — full in-app UX verified
+- [ ] Build sideloadable **APK** via EAS (see README / "How to build the APK" below)
+- [ ] Verify share-sheet capture in the APK build
 
 ---
 
-## Right now — next 3 steps
-1. [ ] Create the Firebase project + enable Email/Password auth.
-2. [ ] Scaffold the repo + open-source files (`LICENSE`, `.gitignore`, `.env.example`).
-3. [ ] Write & emulator-test `firestore.rules`, then prove a cross-client write syncs.
+## ⬜ v2 — Intelligence layer (the "no graveyard" features)
+
+Dependency-ordered. Needs Blaze plan + Claude API key (held server-side in Cloud Functions).
+
+- [ ] **A. AI summaries + auto-tagging on save** — Cloud Function calls Claude API on ingest;
+      writes `summary` + `aiTags`. Highest anti-graveyard value.
+- [ ] **B. Embeddings + "ask your brain"** — semantic search via Firestore vector search.
+- [ ] **C. Connections** — related saves via embedding similarity on the detail screen.
+- [ ] **D. Resurfacing + notifications** — scheduled function + email digest brings old saves back.
+
+---
+
+## 🔜 Cross-cutting / housekeeping
+- [ ] **Commit** Phases 0–3 (currently uncommitted)
+- [ ] `fetchMetadata` Cloud Function (richer link previews for mobile/web) — optional, needs Blaze
+- [ ] `npm audit` pass before any public release
+- [ ] App Check + budget alert before multi-user
+
+---
+
+## Open decisions (see LLD §7 / PRD §12)
+- [ ] Auth providers: email/password only, or add Google/Apple?
+- [ ] Thumbnail policy: reference remote `og:image` vs. cache to Storage
+- [ ] Chrome-only vs. Chrome + Firefox extension
+- [ ] v2 flagship for the demo identity: Reddit thread capture vs. "ask your brain"

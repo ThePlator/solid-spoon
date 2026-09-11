@@ -1,7 +1,14 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  initializeAuth,
+  connectAuthEmulator,
+  type Auth,
+  type Persistence,
+} from 'firebase/auth';
 import {
   getFirestore,
+  initializeFirestore,
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
@@ -26,6 +33,18 @@ export interface InitOptions {
   useEmulator?: boolean;
   /** Emulator host (default "localhost"). */
   emulatorHost?: string;
+  /**
+   * React Native only: an auth persistence built from AsyncStorage via
+   * `getReactNativePersistence(AsyncStorage)`. When provided, auth is created
+   * with `initializeAuth` so sessions survive app restarts. Web/extension omit
+   * this and get the SDK's default (IndexedDB) persistence.
+   */
+  authPersistence?: Persistence;
+  /**
+   * React Native only: force Firestore long-polling transport. RN environments
+   * often can't use the default WebChannel/streaming reliably.
+   */
+  firestoreLongPolling?: boolean;
 }
 
 export interface Services {
@@ -49,8 +68,15 @@ export function initFirebase(
   if (services) return services;
 
   const app = initializeApp(config);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+
+  const auth = options.authPersistence
+    ? initializeAuth(app, { persistence: options.authPersistence })
+    : getAuth(app);
+
+  const db = options.firestoreLongPolling
+    ? initializeFirestore(app, { experimentalForceLongPolling: true })
+    : getFirestore(app);
+
   const storage = getStorage(app);
 
   if (options.useEmulator) {

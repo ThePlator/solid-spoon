@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "SuperMind",
+    "slug": "supermind",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "supermind",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0a0b",
+    "icon": "./assets/icon.png",
+    "android": {
+      "package": "com.supermind.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0b"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.supermind.app",
+      "supportsTablet": true,
+      "icon": "./assets/icon.png"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0a0b",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "androidIntentFilters": [
+            "text/*"
+          ]
+        }
+      ]
+    ],
+    "extra": {
+      "firebaseApiKey": "AIzaSyBhbVNQ65P7g-g3INbIpjwZx4XCCiPz-B8",
+      "firebaseAuthDomain": "second-brain-1f78f.firebaseapp.com",
+      "firebaseProjectId": "second-brain-1f78f",
+      "firebaseStorageBucket": "second-brain-1f78f.firebasestorage.app",
+      "firebaseMessagingSenderId": "691020399060",
+      "firebaseAppId": "1:691020399060:web:6920dc23d6d449ba345641",
+      "eas": {
+        "projectId": "c1aef850-b08b-40da-b0e6-f3015160b782"
+      }
+    }
+  }
+}
