@@ -15,6 +15,7 @@ export function DetailScreen() {
   const id = route.params.id;
 
   const [save, setSave] = useState<Save | null>(null);
+  const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [tags, setTags] = useState('');
@@ -28,14 +29,24 @@ export function DetailScreen() {
     });
   }, [uid, id]);
 
+  // Header action mirrors the current mode: Edit while viewing, Delete while editing.
   useLayoutEffect(() => {
     nav.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={remove}><Text style={{ color: C.danger, fontWeight: '600' }}>Delete</Text></TouchableOpacity>
-      ),
+      headerRight: () =>
+        editing ? (
+          <TouchableOpacity onPress={remove}><Text style={{ color: C.danger, fontWeight: '600' }}>Delete</Text></TouchableOpacity>
+        ) : save ? (
+          <TouchableOpacity onPress={startEdit}><Text style={{ color: C.accent, fontWeight: '600' }}>Edit</Text></TouchableOpacity>
+        ) : null,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nav, save]);
+  }, [nav, save, editing]);
+
+  function startEdit() {
+    if (!save) return;
+    setTitle(save.title); setText(save.text); setTags(save.tags.join(', '));
+    setEditing(true);
+  }
 
   async function persist() {
     if (!uid || !save) return;
@@ -43,7 +54,8 @@ export function DetailScreen() {
     try {
       const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
       await updateSave(uid, save.id, { title, text, tags: tagList }, save);
-      nav.goBack();
+      setSave({ ...save, title, text, tags: tagList });
+      setEditing(false);
     } finally {
       setBusy(false);
     }
@@ -59,6 +71,8 @@ export function DetailScreen() {
 
   if (!save) return <View style={s.wrap}><Text style={s.loading}>Retrieving…</Text></View>;
 
+  const aiOnly = save.aiTags.filter((t) => !save.tags.includes(t));
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={s.wrap}>
       <View style={s.head}>
@@ -66,27 +80,72 @@ export function DetailScreen() {
         <Text style={s.date}>Filed {formatDate(save.createdAt)}</Text>
       </View>
 
-      <Text style={s.label}>Title</Text>
-      <TextInput style={s.input} value={title} onChangeText={setTitle} />
-
-      {save.url ? (
+      {editing ? (
+        /* ── edit mode ── */
         <>
-          <Text style={s.label}>Source</Text>
-          <TouchableOpacity onPress={() => Linking.openURL(save.url!)}>
-            <Text style={s.link}>{save.source || save.url} ↗</Text>
+          <Text style={s.label}>Title</Text>
+          <TextInput style={s.input} value={title} onChangeText={setTitle} />
+
+          {save.url ? (
+            <>
+              <Text style={s.label}>Source</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(save.url!)}>
+                <Text style={s.link}>{save.source || save.url} ↗</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+
+          <Text style={s.label}>{save.type === 'note' ? 'The thought' : 'Note'}</Text>
+          <TextInput style={[s.input, { minHeight: 120, textAlignVertical: 'top' }]} multiline value={text} onChangeText={setText} />
+
+          <Text style={s.label}>Tags</Text>
+          <TextInput style={s.input} value={tags} onChangeText={setTags} placeholder="comma, separated" placeholderTextColor={C.fg3} />
+
+          <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={persist} disabled={busy}>
+            <Text style={s.btnTxt}>{busy ? 'Saving…' : 'Save changes'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.btnGhost} onPress={() => setEditing(false)} disabled={busy}>
+            <Text style={s.btnGhostTxt}>Cancel</Text>
           </TouchableOpacity>
         </>
-      ) : null}
+      ) : (
+        /* ── view mode (default) ── */
+        <>
+          <Text style={s.title}>{save.title || 'Untitled'}</Text>
 
-      <Text style={s.label}>{save.type === 'note' ? 'The thought' : 'Note'}</Text>
-      <TextInput style={[s.input, { minHeight: 120, textAlignVertical: 'top' }]} multiline value={text} onChangeText={setText} />
+          {save.url ? (
+            <TouchableOpacity onPress={() => Linking.openURL(save.url!)}>
+              <Text style={s.sourceLink}>{save.source || save.url} ↗</Text>
+            </TouchableOpacity>
+          ) : null}
 
-      <Text style={s.label}>Tags</Text>
-      <TextInput style={s.input} value={tags} onChangeText={setTags} placeholder="comma, separated" placeholderTextColor={C.fg3} />
+          {save.summary ? (
+            <View style={s.summaryBox}>
+              <Text style={s.label}>Summary</Text>
+              <Text style={s.summaryTxt}>{save.summary}</Text>
+            </View>
+          ) : save.enrichStatus === 'pending' ? (
+            <View style={s.summaryBox}>
+              <Text style={s.label}>Summary</Text>
+              <Text style={s.summaryMuted}>Summarizing…</Text>
+            </View>
+          ) : null}
 
-      <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={persist} disabled={busy}>
-        <Text style={s.btnTxt}>{busy ? 'Saving…' : 'Save changes'}</Text>
-      </TouchableOpacity>
+          {save.text ? (
+            <>
+              <Text style={s.label}>{save.type === 'note' ? 'The thought' : 'Note'}</Text>
+              <Text style={s.bodyTxt}>{save.text}</Text>
+            </>
+          ) : null}
+
+          {save.tags.length > 0 || aiOnly.length > 0 ? (
+            <View style={s.tagRow}>
+              {save.tags.map((t) => <Text key={t} style={s.tag}>#{t}</Text>)}
+              {aiOnly.map((t) => <Text key={t} style={[s.tag, s.tagAi]}>✦{t}</Text>)}
+            </View>
+          ) : null}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -102,4 +161,16 @@ const s = StyleSheet.create({
   link: { color: C.accent, fontSize: 15, marginBottom: 18 },
   btn: { backgroundColor: C.accent, borderRadius: RADIUS, padding: 15, alignItems: 'center', marginTop: 8 },
   btnTxt: { color: C.accentInk, fontWeight: '700', fontSize: 15 },
+  btnGhost: { padding: 15, alignItems: 'center', marginTop: 4 },
+  btnGhostTxt: { color: C.fg2, fontWeight: '600', fontSize: 15 },
+  // view mode
+  title: { color: C.fg, fontSize: 24, fontWeight: '800', letterSpacing: -0.3, lineHeight: 30, marginBottom: 10 },
+  sourceLink: { color: C.accent, fontSize: 14, marginBottom: 20 },
+  summaryBox: { backgroundColor: C.bg2, borderColor: C.line2, borderWidth: 1, borderLeftColor: C.accent, borderLeftWidth: 2, borderRadius: RADIUS, padding: 14, marginBottom: 20 },
+  summaryTxt: { color: C.fg, fontSize: 15, lineHeight: 22 },
+  summaryMuted: { color: C.fg3, fontSize: 15, fontStyle: 'italic' },
+  bodyTxt: { color: C.fg2, fontSize: 15, lineHeight: 24, marginBottom: 20 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  tag: { color: C.fg3, fontSize: 13, fontFamily: 'monospace' },
+  tagAi: { color: C.accent },
 });

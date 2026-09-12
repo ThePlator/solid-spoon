@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as fbAuth from 'firebase/auth';
-import { initFirebase, type FirebaseConfig } from '@supermind/core';
+import { initFirebase, configureEnrich, type FirebaseConfig } from '@supermind/core';
 
 // `getReactNativePersistence` ships only in Firebase's React Native build,
 // which Metro resolves at runtime; the default (web) type entry omits it.
@@ -31,5 +31,7 @@ export function ensureFirebase(): void {
     authPersistence: getReactNativePersistence(AsyncStorage),
     firestoreLongPolling: true,
   });
+  // Absolute URL — the app isn't served from the site's origin.
+  if (extra.enrichEndpoint) configureEnrich(extra.enrichEndpoint);
   ready = true;
 }

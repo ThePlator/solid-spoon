@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { getServices } from './firebase';
 import { buildSearchTokens, tokenizeQuery } from './tokens';
+import { triggerEnrich } from './enrich';
 import type { Save, NewSaveInput, SaveUpdate } from './types';
 
 /** Firestore collection ref for a given user's saves: users/{uid}/saves. */
@@ -47,6 +48,10 @@ function toSave(
     tags: d.tags ?? [],
     searchTokens: d.searchTokens ?? [],
     status: d.status ?? 'active',
+    summary: d.summary ?? null,
+    aiTags: d.aiTags ?? [],
+    enrichStatus: d.enrichStatus ?? 'done',
+    enrichedAt: d.enrichedAt ?? null,
     createdAt: d.createdAt ?? null,
     updatedAt: d.updatedAt ?? null,
   };
@@ -57,6 +62,22 @@ export async function getSave(userId: string, saveId: string): Promise<Save | nu
   const { db } = getServices();
   const snap = await getDoc(doc(db, 'users', userId, 'saves', saveId));
   return snap.exists() ? toSave(snap) : null;
+}
+
+/**
+ * Subscribe to a single save's live changes. Returns an unsubscribe function.
+ * Fires `null` if the doc doesn't exist (or is deleted). Used by the detail
+ * view so async enrichment (summary/tags) appears without a manual refresh.
+ */
+export function subscribeSave(
+  userId: string,
+  saveId: string,
+  onData: (save: Save | null) => void
+): () => void {
+  const { db } = getServices();
+  return onSnapshot(doc(db, 'users', userId, 'saves', saveId), (snap) =>
+    onData(snap.exists() ? toSave(snap) : null)
+  );
 }
 
 /** Create a new save. Derives searchTokens and timestamps automatically. */
@@ -79,9 +100,18 @@ export async function createSave(
     tags,
     searchTokens: buildSearchTokens(title, text, tags),
     status: input.status ?? 'active',
+    // v2 enrichment: created pending, filled in asynchronously by the server.
+    summary: null,
+    aiTags: [],
+    enrichStatus: 'pending',
+    enrichedAt: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  // Fire-and-forget AI enrichment. No-op unless configureEnrich() was called.
+  triggerEnrich(ref.id);
+
   return ref.id;
 }
 
