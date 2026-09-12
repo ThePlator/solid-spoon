@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer, DarkTheme, type Theme } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef, DarkTheme, type Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { User } from 'firebase/auth';
@@ -13,13 +14,37 @@ import { FeedScreen } from './screens/FeedScreen';
 import { CaptureScreen } from './screens/CaptureScreen';
 import { DetailScreen } from './screens/DetailScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { useShareIntentSafe } from './src/shareIntent';
 import { C } from './src/theme';
 import type { RootStackParamList, TabParamList } from './src/nav';
 
 ensureFirebase();
 
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
+
+/**
+ * Routes an incoming share-sheet payload to the Capture tab (prefilled), so a
+ * shared link opens the create page instead of leaving the user on Library.
+ * Lives at the root — the intent is app-wide, not owned by any one screen.
+ * No-op in Expo Go (the hook is stubbed there).
+ */
+function ShareRouter({ navReady }: { navReady: boolean }) {
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentSafe({ resetOnBackground: true });
+
+  useEffect(() => {
+    if (!navReady || !hasShareIntent || !navigationRef.isReady()) return;
+    const sharedUrl = shareIntent.webUrl ?? undefined;
+    const sharedText = sharedUrl ? undefined : (shareIntent.text ?? undefined);
+    if (!sharedUrl && !sharedText) return;
+    navigationRef.navigate('Tabs', { screen: 'Capture', params: { sharedUrl, sharedText } });
+    resetShareIntent();
+  }, [navReady, hasShareIntent, shareIntent, resetShareIntent]);
+
+  return null;
+}
 
 const navTheme: Theme = {
   ...DarkTheme,
@@ -80,27 +105,33 @@ function Tabs() {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [navReady, setNavReady] = useState(false);
 
   useEffect(() => onAuthChange((u) => { setUser(u); setReady(true); }), []);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      {!ready ? (
-        <View style={s.center}><ActivityIndicator color={C.accent} /></View>
-      ) : (
-        <NavigationContainer theme={navTheme}>
-          {user ? (
-            <Stack.Navigator screenOptions={headerStyle}>
-              <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-              <Stack.Screen name="Detail" component={DetailScreen} options={{ title: 'Entry' }} />
-            </Stack.Navigator>
-          ) : (
-            <LoginScreen />
-          )}
-        </NavigationContainer>
-      )}
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        {!ready ? (
+          <View style={s.center}><ActivityIndicator color={C.accent} /></View>
+        ) : (
+          <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setNavReady(true)}>
+            {user ? (
+              <>
+                <ShareRouter navReady={navReady} />
+                <Stack.Navigator screenOptions={headerStyle}>
+                  <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+                  <Stack.Screen name="Detail" component={DetailScreen} options={{ title: 'Entry' }} />
+                </Stack.Navigator>
+              </>
+            ) : (
+              <LoginScreen />
+            )}
+          </NavigationContainer>
+        )}
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

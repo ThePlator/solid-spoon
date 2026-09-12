@@ -13,6 +13,16 @@
 import { getServices } from './firebase';
 
 let enrichEndpoint: string | null = null;
+let enabled = true;
+
+/**
+ * Toggle AI enrichment on/off at runtime (e.g. from an app setting). When
+ * off, `triggerEnrich` is a no-op — saves stay unenriched until re-enabled
+ * (and can be backfilled by the server sweep). Defaults to on.
+ */
+export function setEnrichEnabled(on: boolean): void {
+  enabled = on;
+}
 
 /**
  * Point the client at the enrichment endpoint (the Vercel route handler).
@@ -33,7 +43,7 @@ export function configureEnrich(endpoint: string): void {
  * read/write against that user's subtree.
  */
 export function triggerEnrich(saveId: string): void {
-  if (!enrichEndpoint) return;
+  if (!enrichEndpoint || !enabled) return;
 
   const run = async () => {
     try {

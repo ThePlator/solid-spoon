@@ -1,10 +1,13 @@
-export type RootStackParamList = {
-  Tabs: undefined;
-  Detail: { id: string };
-};
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type TabParamList = {
   Library: undefined;
   Capture: { sharedUrl?: string; sharedText?: string } | undefined;
   Profile: undefined;
+};
+
+export type RootStackParamList = {
+  // Accept nested tab params so a share intent can route straight to Capture.
+  Tabs: NavigatorScreenParams<TabParamList> | undefined;
+  Detail: { id: string };
 };

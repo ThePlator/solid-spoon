@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { createSave, currentUser, type SaveType } from '@supermind/core';
-import { useShareIntentSafe } from '../src/shareIntent';
 import { C, RADIUS } from '../src/theme';
 import type { TabParamList } from '../src/nav';
 
@@ -24,22 +23,14 @@ export function CaptureScreen() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentSafe({ resetOnBackground: true });
-
-  // Prefill from a share-sheet payload passed as route params.
+  // Prefill from a share-sheet payload. The root ShareRouter routes the intent
+  // here as route params (and switches to this tab), so this is the single
+  // place that consumes it — prefilling the create page for the shared link.
   useEffect(() => {
     const p = route.params;
     if (p?.sharedUrl) { setType('link'); setValue(p.sharedUrl); }
     else if (p?.sharedText) { setType('note'); setValue(p.sharedText); }
   }, [route.params]);
-
-  // Prefill from a live share intent (real builds only; stubbed in Expo Go).
-  useEffect(() => {
-    if (!hasShareIntent) return;
-    if (shareIntent.webUrl) { setType('link'); setValue(shareIntent.webUrl); }
-    else if (shareIntent.text) { setType('note'); setValue(shareIntent.text); }
-    resetShareIntent();
-  }, [hasShareIntent, shareIntent, resetShareIntent]);
 
   async function save() {
     const v = value.trim();

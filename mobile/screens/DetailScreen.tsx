@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Linking, Alert,
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import { getSave, updateSave, deleteSave, currentUser, type Save } from '@supermind/core';
+import { subscribeSave, updateSave, deleteSave, currentUser, type Save } from '@supermind/core';
 import { formatDate } from '../src/format';
 import { C, RADIUS } from '../src/theme';
 import type { RootStackParamList } from '../src/nav';
@@ -21,11 +21,18 @@ export function DetailScreen() {
   const [tags, setTags] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Read the latest editing state inside the snapshot callback without
+  // re-subscribing, so live updates never clobber in-progress edits.
+  const editingRef = useRef(false);
+  useEffect(() => { editingRef.current = editing; }, [editing]);
+
   useEffect(() => {
     if (!uid) return;
-    getSave(uid, id).then((sv) => {
+    // Live subscription: async enrichment (summary/tags) appears without leaving the screen.
+    return subscribeSave(uid, id, (sv) => {
       if (!sv) return;
-      setSave(sv); setTitle(sv.title); setText(sv.text); setTags(sv.tags.join(', '));
+      setSave(sv);
+      if (!editingRef.current) { setTitle(sv.title); setText(sv.text); setTags(sv.tags.join(', ')); }
     });
   }, [uid, id]);
 
