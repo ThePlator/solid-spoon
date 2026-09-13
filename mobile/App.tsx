@@ -14,6 +14,7 @@ import { FeedScreen } from './screens/FeedScreen';
 import { CaptureScreen } from './screens/CaptureScreen';
 import { DetailScreen } from './screens/DetailScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { UpdateBanner } from './components/UpdateBanner';
 import { useShareIntentSafe } from './src/shareIntent';
 import { C } from './src/theme';
 import type { RootStackParamList, TabParamList } from './src/nav';
@@ -130,6 +131,7 @@ export default function App() {
             )}
           </NavigationContainer>
         )}
+        {ready && user ? <UpdateBanner /> : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
