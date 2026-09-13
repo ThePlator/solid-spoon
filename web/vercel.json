@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/enrich-sweep",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

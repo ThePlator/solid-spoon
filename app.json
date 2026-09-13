@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c1aef850-b08b-40da-b0e6-f3015160b782"
+      }
+    },
+    "android": {
+      "package": "com.theplator.supermind"
+    }
+  }
+}
