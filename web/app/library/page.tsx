@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   subscribeFeed, searchSaves, filterByTag, signOut, type Save,
@@ -18,6 +18,8 @@ export default function LibraryPage() {
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [results, setResults] = useState<Save[] | null>(null);
+  // Bumped on every search/tag action; async responses only apply if still current.
+  const searchSeq = useRef(0);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -43,16 +45,20 @@ export default function LibraryPage() {
   async function runSearch(q: string) {
     setQuery(q);
     setActiveTag(null);
+    const seq = ++searchSeq.current;
     if (!user || q.trim().length < 2) { setResults(null); return; }
-    setResults(await searchSaves(user.uid, q));
+    const r = await searchSaves(user.uid, q);
+    if (seq === searchSeq.current) setResults(r); // drop stale responses
   }
 
   async function toggleTag(tag: string) {
     setQuery('');
+    const seq = ++searchSeq.current;
     if (!user) return;
     if (activeTag === tag) { setActiveTag(null); setResults(null); return; }
     setActiveTag(tag);
-    setResults(await filterByTag(user.uid, tag));
+    const r = await filterByTag(user.uid, tag);
+    if (seq === searchSeq.current) setResults(r);
   }
 
   if (loading || !user) return null;

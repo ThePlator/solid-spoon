@@ -18,13 +18,21 @@ export function SaveCard({ save }: { save: Save }) {
       )}
 
       <h3 className="card-title">{save.title || 'Untitled'}</h3>
-      {save.text && save.text !== save.title && <p className="card-snippet">{save.text}</p>}
+      {save.summary ? (
+        <p className="card-snippet">{save.summary}</p>
+      ) : (
+        save.text && save.text !== save.title && <p className="card-snippet">{save.text}</p>
+      )}
 
       <div className="card-foot">
         {save.source && <span className="card-source">{save.source}</span>}
         {save.tags.map((t) => <span key={t} className="tag">{t}</span>)}
+        {save.aiTags
+          .filter((t) => !save.tags.includes(t))
+          .map((t) => <span key={t} className="tag tag-ai">{t}</span>)}
         {save.status === 'pending' && <span className="badge-pending">fetching</span>}
         {save.status === 'error' && <span className="badge-error">no preview</span>}
+        {save.enrichStatus === 'pending' && <span className="badge-pending">summarizing</span>}
       </div>
     </Link>
   );

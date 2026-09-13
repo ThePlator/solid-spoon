@@ -1,4 +1,4 @@
-import { initFirebase, type FirebaseConfig } from '@supermind/core';
+import { initFirebase, configureEnrich, type FirebaseConfig } from '@supermind/core';
 
 const config: FirebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,5 +13,8 @@ let ready = false;
 export function ensureFirebase(): void {
   if (ready) return;
   initFirebase(config);
+  // Absolute URL — the extension isn't served from the site's origin.
+  const enrich = import.meta.env.VITE_ENRICH_ENDPOINT;
+  if (enrich) configureEnrich(enrich);
   ready = true;
 }

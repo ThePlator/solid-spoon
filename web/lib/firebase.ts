@@ -1,4 +1,4 @@
-import { initFirebase, type FirebaseConfig } from '@supermind/core';
+import { initFirebase, configureEnrich, type FirebaseConfig } from '@supermind/core';
 
 const config: FirebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -17,5 +17,7 @@ export function ensureFirebase(): void {
   initFirebase(config, {
     useEmulator: process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true',
   });
+  // Fire AI enrichment on save. Same-origin, so a relative path is fine here.
+  configureEnrich(process.env.NEXT_PUBLIC_ENRICH_ENDPOINT ?? '/api/enrich');
   ready = true;
 }
