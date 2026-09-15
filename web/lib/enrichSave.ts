@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { FieldValue } from 'firebase-admin/firestore';
 import { buildSearchTokens } from '@supermind/core';
 import { adminDb } from './firebaseAdmin';
+import { extractContent } from './extract';
 
 // Core enrichment step, reused by /api/enrich (per-save) and /api/enrich-sweep
 // (batch backstop). Reads a save, asks Gemini for a summary + tags, and writes
@@ -42,13 +43,14 @@ interface SaveDoc {
   enrichStatus?: string;
 }
 
-/** Build the model input from a save's user-facing content. */
-function buildPrompt(d: SaveDoc): string {
+/** Build the model input from a save's fields plus any extracted page content. */
+function buildPrompt(d: SaveDoc, extracted: string): string {
   const parts: string[] = [];
   if (d.title) parts.push(`Title: ${d.title}`);
   if (d.url) parts.push(`URL: ${d.url}`);
   if (d.type) parts.push(`Type: ${d.type}`);
-  if (d.text) parts.push(`Content:\n${d.text.slice(0, 12000)}`);
+  if (d.text) parts.push(`Note: ${d.text.slice(0, 2000)}`);
+  if (extracted) parts.push(`Page content:\n${extracted}`);
   return parts.join('\n');
 }
 
@@ -57,18 +59,35 @@ interface Enrichment {
   tags: string[];
 }
 
+/** Retry the model call on transient errors (503 overloaded / 429 rate limit). */
+async function generateWithRetry(prompt: string, retries = 3) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await gemini().models.generateContent({
+        model: MODEL,
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+          temperature: 0.2,
+          maxOutputTokens: 512,
+        },
+      });
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      const transient =
+        e.status === 503 || e.status === 429 ||
+        /unavailable|overloaded|high demand|rate limit/i.test(e.message ?? '');
+      if (!transient || attempt >= retries - 1) throw err;
+      // Exponential-ish backoff: 0.6s, 1.2s, 1.8s.
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+    }
+  }
+}
+
 async function callGemini(prompt: string): Promise<Enrichment> {
-  const res = await gemini().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: 'application/json',
-      responseSchema: RESPONSE_SCHEMA,
-      temperature: 0.2,
-      maxOutputTokens: 512,
-    },
-  });
+  const res = await generateWithRetry(prompt);
 
   const text = res.text;
   if (!text) return { summary: '', tags: [] };
@@ -106,7 +125,10 @@ export async function enrichSave(
   const d = snap.data() as SaveDoc;
   if (d.enrichStatus === 'done') return 'already';
 
-  const prompt = buildPrompt(d);
+  // Fetch the real page content for links so the summary reflects what's on the
+  // page, not just the URL. Best-effort: returns '' on failure.
+  const extracted = d.type === 'link' && d.url ? await extractContent(d.url) : '';
+  const prompt = buildPrompt(d, extracted);
   if (!prompt.trim()) {
     await ref.update({ enrichStatus: 'skipped', enrichedAt: FieldValue.serverTimestamp() });
     return 'skipped';

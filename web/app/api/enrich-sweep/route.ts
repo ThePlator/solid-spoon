@@ -25,9 +25,10 @@ export async function GET(req: Request) {
   }
 
   // Collection-group query across every user's saves (Admin SDK bypasses rules).
+  // Retry both never-enriched (`pending`) and transiently-failed (`error`) saves.
   const snap = await adminDb()
     .collectionGroup('saves')
-    .where('enrichStatus', '==', 'pending')
+    .where('enrichStatus', 'in', ['pending', 'error'])
     .limit(BATCH)
     .get();
 
