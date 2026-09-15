@@ -41,28 +41,43 @@ export function configureEnrich(endpoint: string): void {
  * Ask the server to enrich a save. Best-effort: never throws, never awaited by
  * callers. Uses the current user's ID token so the server can authorize the
  * read/write against that user's subtree.
+ *
+ * Retries up to 4 times with increasing delays. This matters most on a
+ * cold-started share (app launched fresh from the share sheet): Firebase auth
+ * and the network may not be ready on the first attempt, so `auth.currentUser`
+ * is null — we skip that attempt and let the loop retry until a request lands.
+ * Stops as soon as one request succeeds (`res.ok`). Anything that still misses
+ * is caught by the server-side cron sweep.
  */
 export function triggerEnrich(saveId: string): void {
   if (!enrichEndpoint || !enabled) return;
 
+  const delays = [800, 1600, 2400, 3200];
+
   const run = async () => {
-    try {
-      const { auth } = getServices();
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      await fetch(enrichEndpoint as string, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ saveId }),
-        // Let the request outlive a closing tab where supported.
-        keepalive: true,
-      });
-    } catch {
-      // Enrichment is best-effort; the cron sweep is the backstop.
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      try {
+        const { auth } = getServices();
+        const user = auth.currentUser;
+        // Auth not restored yet (common on cold-started shares) — wait and retry.
+        if (user) {
+          const token = await user.getIdToken();
+          const res = await fetch(enrichEndpoint as string, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ saveId }),
+            // Let the request outlive a closing tab where supported.
+            keepalive: true,
+          });
+          if (res.ok) return; // landed — done
+        }
+      } catch {
+        // Best-effort; fall through to retry, then the cron sweep backstops.
+      }
+      await new Promise((r) => setTimeout(r, delays[attempt]));
     }
   };
 
