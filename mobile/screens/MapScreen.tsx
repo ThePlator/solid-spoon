@@ -22,8 +22,12 @@ export function MapScreen() {
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [uri, setUri] = useState<string | null>(null);
 
+  // Load the WebView URL once (with a fresh token). The tab screen stays mounted
+  // across tab switches, so the graph — and its cache — persist without a reload
+  // or refetch. The token is only minted the first time it's needed.
   useFocusEffect(
     useCallback(() => {
+      if (uri) return; // already loaded — don't reload on refocus
       let alive = true;
       (async () => {
         const user = currentUser();
@@ -36,7 +40,7 @@ export function MapScreen() {
         }
       })();
       return () => { alive = false; };
-    }, [])
+    }, [uri])
   );
 
   function onMessage(e: WebViewMessageEvent) {
