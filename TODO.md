@@ -94,7 +94,7 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
 ## 🔜 Housekeeping / must-do
 - [x] Merged + deployed v0.2.0 (web to Vercel; app + extension GitHub releases published)
 - [x] **Rotated the exposed Firebase service-account key** (old key `df90e70d…` deleted; new key in Vercel env)
-- [ ] Optional: GitHub Actions cron to hit `/api/enrich-sweep` more often than daily (free)
+- [x] **Enrichment reliability** — `triggerEnrich` retries on cold-started shares (shipped to mobile via OTA); GitHub Actions 10-min sweep (`CRON_SECRET` secret set) backstops the daily Vercel cron
 - [ ] `npm audit` pass; App Check + budget alerts before multi-user
 - [ ] Optional: shrink APK (arm64-only + Proguard) — currently ~87 MB universal → ~40 MB
 

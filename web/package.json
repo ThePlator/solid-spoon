@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "enrich:pending": "node --env-file=.env.local scripts/enrich-pending.mjs"
+    "enrich:pending": "node --env-file=.env.local scripts/enrich-pending.mjs",
+    "embed:backfill": "node --env-file=.env.local scripts/embed-backfill.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
@@ -16,7 +17,8 @@
     "firebase-admin": "^13.0.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

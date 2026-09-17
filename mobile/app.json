@@ -58,6 +58,7 @@
       "firebaseMessagingSenderId": "691020399060",
       "firebaseAppId": "1:691020399060:web:6920dc23d6d449ba345641",
       "enrichEndpoint": "https://supermind.theplator.dev/api/enrich",
+      "webUrl": "https://supermind.theplator.dev",
       "eas": {
         "projectId": "c1aef850-b08b-40da-b0e6-f3015160b782"
       }

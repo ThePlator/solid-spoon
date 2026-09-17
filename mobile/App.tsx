@@ -13,6 +13,8 @@ import { LoginScreen } from './screens/LoginScreen';
 import { FeedScreen } from './screens/FeedScreen';
 import { CaptureScreen } from './screens/CaptureScreen';
 import { DetailScreen } from './screens/DetailScreen';
+import { NotFoundScreen } from './screens/NotFoundScreen';
+import { MapScreen } from './screens/MapScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useShareIntentSafe } from './src/shareIntent';
@@ -96,6 +98,10 @@ function Tabs() {
         options={{ tabBarIcon: ({ focused }) => <TabIcon label="+" focused={focused} /> }}
       />
       <Tab.Screen
+        name="Map" component={MapScreen}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon label="⬡" focused={focused} /> }}
+      />
+      <Tab.Screen
         name="Profile" component={ProfileScreen}
         options={{ tabBarIcon: ({ focused }) => <TabIcon label="◍" focused={focused} /> }}
       />
@@ -124,6 +130,7 @@ export default function App() {
                 <Stack.Navigator screenOptions={headerStyle}>
                   <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
                   <Stack.Screen name="Detail" component={DetailScreen} options={{ title: 'Entry' }} />
+                  <Stack.Screen name="NotFound" component={NotFoundScreen} options={{ title: '404' }} />
                 </Stack.Navigator>
               </>
             ) : (

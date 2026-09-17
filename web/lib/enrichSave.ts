@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { buildSearchTokens } from '@supermind/core';
 import { adminDb } from './firebaseAdmin';
 import { extractContent } from './extract';
+import { embedText, EMBED_MODEL } from './embed';
 
 // Core enrichment step, reused by /api/enrich (per-save) and /api/enrich-sweep
 // (batch backstop). Reads a save, asks Gemini for a summary + tags, and writes
@@ -147,6 +148,20 @@ export async function enrichSave(
       enrichStatus: summary || tags.length ? 'done' : 'skipped',
       enrichedAt: FieldValue.serverTimestamp(),
     });
+
+    // Embed the enriched content for the brain map. Best-effort, stored in a
+    // separate subcollection so it never bloats feed reads.
+    const embInput = [d.title, summary, tags.join(' '), extracted].filter(Boolean).join('\n');
+    const vec = await embedText(embInput);
+    if (vec) {
+      await adminDb().doc(`users/${userId}/vectors/${saveId}`).set({
+        v: vec,
+        model: EMBED_MODEL,
+        dims: vec.length,
+        at: FieldValue.serverTimestamp(),
+      });
+    }
+
     return summary || tags.length ? 'done' : 'skipped';
   } catch (err) {
     await ref.update({ enrichStatus: 'error', enrichedAt: FieldValue.serverTimestamp() });

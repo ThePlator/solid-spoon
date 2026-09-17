@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   subscribeFeed, searchSaves, filterByTag, signOut, type Save,
 } from '@supermind/core';
@@ -77,6 +78,7 @@ export default function LibraryPage() {
           <span className="ver">v0.1</span>
         </div>
         <div className="topbar-right">
+          <Link href="/map" className="ghost" style={{ textDecoration: 'none' }}>◍ Map</Link>
           <span className="who">{user.email}</span>
           <button className="ghost" onClick={() => signOut()}>Log out</button>
         </div>

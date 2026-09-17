@@ -15,6 +15,7 @@ export function DetailScreen() {
   const id = route.params.id;
 
   const [save, setSave] = useState<Save | null>(null);
+  const [resolved, setResolved] = useState(false);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
@@ -30,11 +31,21 @@ export function DetailScreen() {
     if (!uid) return;
     // Live subscription: async enrichment (summary/tags) appears without leaving the screen.
     return subscribeSave(uid, id, (sv) => {
+      setResolved(true);
       if (!sv) return;
       setSave(sv);
       if (!editingRef.current) { setTitle(sv.title); setText(sv.text); setTags(sv.tags.join(', ')); }
     });
   }, [uid, id]);
+
+  useEffect(() => {
+    if (resolved && !save) {
+      nav.replace('NotFound', {
+        title: 'Entry not found',
+        message: 'This save was deleted, moved, or the link is stale.',
+      });
+    }
+  }, [resolved, save, nav]);
 
   // Header action mirrors the current mode: Edit while viewing, Delete while editing.
   useLayoutEffect(() => {
@@ -76,7 +87,7 @@ export function DetailScreen() {
     ]);
   }
 
-  if (!save) return <View style={s.wrap}><Text style={s.loading}>Retrieving…</Text></View>;
+  if (!resolved || !save) return <View style={s.wrap}><Text style={s.loading}>Retrieving…</Text></View>;
 
   const aiOnly = save.aiTags.filter((t) => !save.tags.includes(t));
 
