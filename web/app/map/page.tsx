@@ -18,6 +18,19 @@ interface Graph { nodes: GNode[]; edges: GEdge[]; clusters: number }
 
 const CACHE_TTL = 60 * 60 * 1000; // 1h
 
+function hostOf(url: string | null): string {
+  try { return url ? new URL(url).hostname.replace(/^www\./, '') : ''; } catch { return ''; }
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  if (typeof (ctx as any).roundRect === 'function') { (ctx as any).roundRect(x, y, w, h, r); return; }
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+}
+
 function MapView() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -31,6 +44,7 @@ function MapView() {
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [sel, setSel] = useState<GNode | null>(null);
   const fgRef = useRef<any>(null);
+  const iconCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
   useEffect(() => {
     const update = () => setSize({ w: window.innerWidth, h: window.innerHeight - (embedded ? 0 : 56) });
@@ -73,6 +87,19 @@ function MapView() {
   }, [urlToken, user, cacheKey]);
 
   useEffect(() => { if (urlToken || user) fetchGraph(false); }, [urlToken, user, fetchGraph]);
+
+  // Preload site favicons so nodes render as recognizable site icons, not dots.
+  useEffect(() => {
+    if (!graph) return;
+    for (const n of graph.nodes) {
+      const host = n.source || hostOf(n.url);
+      if (!host || iconCache.current.has(host)) continue;
+      const img = new Image(); // no crossOrigin: we only draw, never read pixels
+      img.src = `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+      img.onload = () => fgRef.current?.refresh?.();
+      iconCache.current.set(host, img);
+    }
+  }, [graph]);
 
   const data = useMemo(() => {
     if (!graph) return { nodes: [], links: [] };
@@ -146,34 +173,83 @@ function MapView() {
           linkColor={(l: any) => {
             if (neighborIds) {
               const on = neighborIds.has(l.source.id ?? l.source) && neighborIds.has(l.target.id ?? l.target);
-              return on ? `rgba(204,255,0,${0.2 + 0.5 * (l.weight ?? 0.4)})` : 'rgba(120,120,130,0.05)';
+              return on ? `rgba(204,255,0,${0.18 + 0.42 * (l.weight ?? 0.4)})` : 'rgba(120,120,130,0.04)';
             }
-            return `rgba(160,160,170,${0.06 + 0.2 * (l.weight ?? 0.4)})`;
+            return `rgba(150,150,160,${0.05 + 0.16 * (l.weight ?? 0.4)})`;
           }}
-          linkWidth={(l: any) => 0.4 + 1.8 * (l.weight ?? 0.4)}
-          nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-            const dim = neighborIds ? !neighborIds.has(node.id) : false;
-            const r = 3 + Math.min(6, (node.degree ?? 0) * 1.1);
-            ctx.globalAlpha = dim ? 0.18 : 1;
-            // glow
-            ctx.shadowColor = node.color || '#ccff00';
-            ctx.shadowBlur = dim ? 0 : 12;
+          linkWidth={(l: any) => 0.3 + 1.4 * (l.weight ?? 0.4)}
+          nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
+            const r = 7 + Math.min(7, (node.degree ?? 0) * 0.9);
+            ctx.fillStyle = color;
             ctx.beginPath();
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-            ctx.fillStyle = node.color || '#ccff00';
             ctx.fill();
-            ctx.shadowBlur = 0;
-            if (node.id === sel?.id) {
-              ctx.lineWidth = 1.5 / globalScale;
-              ctx.strokeStyle = '#f4f4f2';
-              ctx.stroke();
-            }
-            if ((globalScale > 1.3 || (node.degree ?? 0) >= 4) && !dim) {
-              const label = String(node.title).slice(0, 26);
-              ctx.font = `${11 / globalScale}px ui-sans-serif, system-ui`;
-              ctx.fillStyle = 'rgba(244,244,242,0.8)';
+          }}
+          nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const dim = neighborIds ? !neighborIds.has(node.id) : false;
+            const selected = node.id === sel?.id;
+            const r = 7 + Math.min(7, (node.degree ?? 0) * 0.9);
+            ctx.globalAlpha = dim ? 0.22 : 1;
+
+            // base disc with a soft (not neon) drop shadow
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.55)';
+            ctx.shadowBlur = dim ? 0 : 7;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+            ctx.fillStyle = '#17171a';
+            ctx.fill();
+            ctx.restore();
+
+            const host = node.source || hostOf(node.url);
+            const img = host ? iconCache.current.get(host) : null;
+            if (img && img.complete && img.naturalWidth) {
+              // clip the favicon into the disc
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, r - 1.6, 0, 2 * Math.PI);
+              ctx.clip();
+              const d = (r - 1.6) * 2;
+              ctx.drawImage(img, node.x - (r - 1.6), node.y - (r - 1.6), d, d);
+              ctx.restore();
+            } else {
+              // fallback: cluster-colored disc with the title's initial
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, r - 1.6, 0, 2 * Math.PI);
+              ctx.fillStyle = node.color || '#ccff00';
+              ctx.fill();
+              ctx.fillStyle = '#0a0a0b';
+              ctx.font = `700 ${r * 0.95}px ui-sans-serif, system-ui`;
               ctx.textAlign = 'center';
-              ctx.fillText(label, node.x, node.y + r + 9 / globalScale);
+              ctx.textBaseline = 'middle';
+              ctx.fillText((String(node.title)[0] || '•').toUpperCase(), node.x, node.y + 0.5);
+              ctx.textBaseline = 'alphabetic';
+            }
+
+            // thin cluster-color ring (white when selected)
+            ctx.lineWidth = selected ? 2.2 : 1.4;
+            ctx.strokeStyle = selected ? '#f4f4f2' : node.color || '#ccff00';
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // label chip for hubs / selected / zoomed-in
+            if ((selected || (node.degree ?? 0) >= 4 || globalScale > 1.7) && !dim) {
+              const label = String(node.title).slice(0, 26);
+              const fs = 11 / globalScale;
+              ctx.font = `500 ${fs}px ui-sans-serif, system-ui`;
+              const tw = ctx.measureText(label).width;
+              const padX = 5 / globalScale;
+              const ly = node.y + r + 10 / globalScale;
+              ctx.fillStyle = 'rgba(10,10,11,0.78)';
+              ctx.beginPath();
+              roundRect(ctx, node.x - tw / 2 - padX, ly - fs * 0.75, tw + padX * 2, fs * 1.6, 3 / globalScale);
+              ctx.fill();
+              ctx.fillStyle = 'rgba(244,244,242,0.92)';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(label, node.x, ly + fs * 0.05);
+              ctx.textBaseline = 'alphabetic';
             }
             ctx.globalAlpha = 1;
           }}

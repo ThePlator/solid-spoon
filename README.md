@@ -28,21 +28,41 @@ All three clients share a single data layer and synchronize in real time through
 - Real-time cross-device synchronization tied to a user account.
 - Email and password authentication with per-user data isolation.
 
+## Features (v2 — intelligence layer, shipped)
+
+- **AI summaries + auto-tagging** — every save is summarized and tagged automatically on
+  capture (Google **Gemini**), so you remember *why* you saved something without reopening it.
+- **Content extraction** — real page content is fetched (free Jina Reader) before
+  summarizing, so summaries reflect the article, not just the URL.
+- **Brain map** — a force-directed graph of your whole library. Saves are embedded
+  (Gemini), linked to their most similar neighbors, and grouped into color-coded clusters,
+  so you can *see what relates to what*. Available on web (`/map`) and in the mobile app.
+- **AI-tag search** — automatic tags fold into the search index, so semantic tags are findable.
+
+All v2 features run on the **free tier** — a Vercel serverless route plus a Gemini API key.
+**No Firebase Blaze plan required.** See `docs/V2-PLAN.md`.
+
 ---
 
 ## Architecture
 
-Three clients communicate directly with a single Firebase backend. There is no custom server; authorization is enforced by Firestore Security Rules.
+For v1, three clients communicate directly with a single Firebase backend — no custom
+server; authorization is enforced by Firestore Security Rules. v2's intelligence layer adds
+a small **Vercel serverless route** for AI enrichment and the brain-map graph (it holds the
+Gemini API key and verifies the caller's Firebase token) — **not** Cloud Functions, so no
+Blaze plan is needed.
 
 ```
-Browser extension ─┐
-                   ├──► Firebase (Auth · Firestore · Storage · Functions) ◄── Web library
-Mobile application ─┘
+Browser extension ─┐                                    ┌─► Vercel route ─► Gemini
+                   ├─► Firebase (Auth · Firestore) ◄────┤   (enrich · /api/graph)
+Mobile application ─┤                                    └─► writes summary/tags/vectors back
+Web library ───────┘
 ```
 
 | Layer | Technology |
 | --- | --- |
-| Backend | Firebase: Authentication, Cloud Firestore, Cloud Storage, Cloud Functions |
+| Backend | Firebase: Authentication, Cloud Firestore, Cloud Storage |
+| Intelligence layer | Vercel serverless routes (`/api/enrich`, `/api/graph`) + Google Gemini |
 | Web library | Next.js (React) |
 | Browser extension | Chrome Manifest V3 |
 | Mobile application | React Native (Expo SDK 57) with React Navigation |
@@ -164,7 +184,7 @@ When the build completes, EAS provides a download link for the APK. The resultin
 
 ## Cost
 
-Running a personal instance is effectively free. Firebase's free tier covers single-user usage of Authentication, Firestore, and Storage. Cloud Functions require the pay-as-you-go plan but remain within the free allowance at this scale. The only optional cost is an Apple Developer account for native iOS distribution, which does not apply to the Android build.
+Running a personal instance is effectively free. Firebase's free tier covers single-user usage of Authentication, Firestore, and Storage. The v2 intelligence layer runs on a **Vercel** free-tier route and a **Google Gemini** API key — Gemini's free tier is sufficient at personal scale, and **no Firebase Blaze plan is required**. Content extraction uses the free Jina Reader (no key). The only optional cost is an Apple Developer account for native iOS distribution, which does not apply to the Android build.
 
 ---
 
@@ -179,7 +199,9 @@ Running a personal instance is effectively free. Firebase's free tier covers sin
 
 ## Roadmap
 
-Version 1 delivers the capture, storage, and retrieval loop across web, extension, and mobile. Planned subsequent work includes automated tagging and summarization, semantic search over the library, related-item connections, and resurfacing of older items. These are documented in `PRD-SuperMind.md` and are not part of the version 1 scope.
+Version 1 delivered the capture, storage, and retrieval loop across web, extension, and mobile. Version 2's intelligence layer — AI summaries, auto-tagging, content extraction, embeddings, and the brain map — is **shipped**.
+
+The next direction is the **"compiler" layer**, inspired by Karpathy's *LLM Wiki* pattern: rather than enriching each save in isolation, the system will use the similarity it already computes to write back **connections** and **contradictions** at capture time, add an **"ask your brain"** query mode, and periodically **lint** the library (flagging stale claims and orphans) with a "what changed" digest. This turns the library into a knowledge base that compounds rather than merely accumulates. See `docs/V2-PLAN.md` §10 and `PRD-SuperMind.md`.
 
 ---
 

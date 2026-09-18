@@ -1,8 +1,10 @@
 # ✅ SuperMind — Build TODO
 
-Tracks the build. **v1 is complete** and **v2 Feature A (AI summaries + auto-tagging)
-is shipped.** See `PRD-SuperMind.md`, `docs/HLD.md`, `docs/LLD.md`, `docs/V2-PLAN.md`,
-and `.claude/RULES.md`.
+Tracks the build. **v1 is complete.** **v2 Feature A (AI summaries + auto-tagging),
+content extraction, and the brain map (embeddings + graph) are shipped.** Next up is the
+**"compiler" layer** — connections, contradictions, and "ask your brain" (see
+`docs/V2-PLAN.md` §10). See `PRD-SuperMind.md`, `docs/HLD.md`, `docs/LLD.md`,
+`docs/V2-PLAN.md`, and `.claude/RULES.md`.
 
 Legend: `[x]` done · `[~]` in progress · `[ ]` todo
 
@@ -74,20 +76,55 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
 - [x] Data model: `summary`, `aiTags`, `enrichStatus`, `enrichedAt` on `Save`
 - [x] End-to-end verified against production Firebase + Gemini
 
-### ⬜ Next v2 features
-- [x] **Content extraction — SHIPPED** — fetches real page content before summarizing so
+### ✅ Content extraction — SHIPPED
+- [x] **Content extraction** — fetches real page content before summarizing so
       summaries reflect the actual content, not the URL. *Big quality win; verified before/after.*
   - [x] `web/lib/extract.ts` — `extractContent(url)`: Reddit `.json` special-case; else free
         **Jina Reader** (`r.jina.ai/<url>`); 8s timeout, ~12k char cap, returns '' on failure
   - [x] Wired into `enrichSave.ts` prompt (links only; graceful fallback to title/URL)
   - [x] Optional env: `EXTRACT_ENABLED` (default on), `JINA_API_KEY` (free, higher rate limit)
   - [x] Before/after verified — GitHub README + Medium article summaries now content-accurate
-  - [ ] Deploy to Vercel (web-only change)
+  - [x] Deployed to Vercel
   - Note: social (IG/LinkedIn/X) stays weak on the free path — paid Apify/Firecrawl is a later call
-- [ ] **B. Embeddings + "ask your brain"** — semantic search (Voyage AI embeddings + Firestore
-      vector search). Anthropic has no embeddings API.
-- [ ] **C. Connections** — related saves via embedding similarity on the detail screen
-- [ ] **D. Resurfacing + notifications** — scheduled sweep surfaces old saves; digest
+
+### ✅ Embeddings + Brain Map — SHIPPED
+> **Architecture changed from the original plan.** Instead of Voyage AI + a Firestore
+> vector index, we used **Gemini `gemini-embedding-001`** (768-dim) and compute cosine
+> similarity **in memory** in the graph API — no vector index needed at personal scale.
+- [x] `web/lib/embed.ts` — `embedText` (Gemini, 768 dims, SEMANTIC_SIMILARITY) + `cosine`
+- [x] Embeddings written to `users/{uid}/vectors/{saveId}` on enrich
+- [x] `GET /api/graph` — nodes + top-K similarity edges + label-propagation clusters
+- [x] **`/map` page** — react-force-graph canvas, favicon nodes, cluster colors, focus
+      mode, info panel (related saves + %), 1h localStorage cache, fit/rebuild controls
+- [x] **Mobile Map tab** — WebView loads the deployed `/map?embed=1&token=…`; node taps
+      `postMessage` back → native Detail
+- [x] `npm run embed:backfill` local backfill script
+- [x] Deployed (web + mobile WebView); mobile Map tab needs new APK (native WebView)
+
+### ⬜ Next v2 features — the "compiler" layer (LLM Wiki inspired)
+> **New direction** (see `docs/V2-PLAN.md` §10). Karpathy's *LLM Wiki* names the gap:
+> today each save is enriched **in isolation** — a new save never changes an old one.
+> That's a **library**. The next step is a **compiler**: at ingest, use the neighbors
+> we *already compute* to write back connections + contradictions, and periodically
+> lint the whole library. We already have every piece (embeddings, neighbor search,
+> Gemini) — it's mostly wiring, not new infrastructure.
+- [ ] **B. Connection write-back (Ingest touches neighbors)** — on enrich, find top-K
+      neighbors (reuse graph logic) and write a short `connections` field
+      ("extends X · same topic as Y") onto the save. No new infra.
+- [ ] **B2. Contradiction flagging** — when high-similarity neighbors make *differing*
+      claims, have Gemini flag it → `contradictions` field. The differentiator no other
+      second-brain has. One extra Gemini call at ingest (neighbor text already in hand).
+- [ ] **C. "Ask your brain" (Query)** — semantic Q&A. Per the LLM Wiki article, at personal
+      scale feed Gemini a compact **index** of titles+summaries (no Firestore vector index
+      needed) → it picks relevant saves → synthesizes an answer. Answers are **savable as
+      new nodes** so explorations compound.
+- [ ] **D. Lint mode + "what changed" log** — a second mode for the existing sweep:
+      find contradictions, stale claims, orphan saves, missing hub topics. Append dated
+      entries to a `users/{uid}/log` feed → surface a "3 new connections, 1 contradiction"
+      digest on Feed/Profile (the retention payoff).
+- [ ] **E. Resurfacing** — scheduled sweep surfaces forgotten-but-relevant old saves; digest
+- [ ] **Deletion cascade** — deleting a save must remove its vector + derived
+      connections/contradictions (compiler risk: "a bad source touches 15 pages")
 
 ---
 
@@ -104,4 +141,7 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
 - [ ] Social-link content (Instagram/LinkedIn/X): accept free-reader fragments vs. paid Apify/Firecrawl
 - [ ] Auth providers: email/password only, or add Google/Apple?
 - [ ] Thumbnail policy: reference remote `og:image` vs. cache to Storage
-- [ ] Embeddings provider for Feature B (Voyage AI) + when to add vector index
+- [x] ~~Embeddings provider~~ — **RESOLVED: Gemini `gemini-embedding-001`, in-memory cosine (no vector index)**
+- [ ] "Ask your brain" retrieval: index-based (Gemini picks from a titles+summaries list, per
+      LLM Wiki) vs. embedding vector search. Article recommends index at personal scale.
+- [ ] Contradiction detection: run on every ingest (cost) vs. only in the periodic Lint sweep

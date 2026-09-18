@@ -1,11 +1,23 @@
 # SuperMind v2 — Intelligence Layer Plan
 
 **Companion to:** `../PRD-SuperMind.md`, `HLD.md`, `LLD.md`
-**Status:** Planning — for review before build
+**Status:** Partly shipped — see the banner below
 **Owner:** Sameer
 **Premise:** v1 (capture → store → retrieve) is complete across web, extension, and mobile. v2 adds the intelligence layer that stops the library becoming a graveyard: summaries, auto-tags, semantic search, connections, and resurfacing.
 
 > This is a plan, not an implementation. It commits the architecture and sequencing so the build is additive and doesn't require reworking v1.
+
+> ## ⚠️ ARCHITECTURE PIVOT — read `§10` first
+> **§2–§9 below are the ORIGINAL plan and are now historical.** The shipped
+> architecture is different and **avoids the Blaze plan entirely**:
+> - ❌ ~~Cloud Functions~~ → ✅ **Vercel serverless routes** + client-fire from `createSave`
+> - ❌ ~~Claude (Haiku 4.5)~~ → ✅ **Gemini** (`gemini-2.5-flash` summaries/tags, `gemini-embedding-001` embeddings)
+> - ❌ ~~Voyage AI + Firestore vector index~~ → ✅ **Gemini embeddings + in-memory cosine**
+> - ❌ ~~Blaze plan~~ → ✅ **free tier** (no card)
+>
+> **Shipped:** Feature A (summaries + tags), content extraction, embeddings, and the
+> **brain map**. **Next:** the "compiler" layer (§10). Keep §2–§9 for the reasoning trail,
+> but build against §10.
 
 ---
 
@@ -273,4 +285,86 @@ Random resurfacing feels like noise and trains users to ignore the digest. The w
 
 ### Tuning
 The weights are guesses until there's real usage. Ship with sensible defaults, make them config constants, and adjust based on whether surfaced items actually get opened (track a `surfacedOpened` event later).
+
+---
+
+## 10. The compiler layer — LLM Wiki direction *(current plan)*
+
+> Supersedes §2–§9's *provider* choices (see the banner at the top). The **operations**
+> below are the live roadmap. Inspired by Karpathy's *LLM Wiki* pattern.
+
+### 10.1 The thesis: library → compiler
+
+Everything shipped so far (summaries, tags, embeddings, the brain map) enriches each save
+**in isolation**. A new save never changes an old one. In the LLM Wiki framing that makes
+SuperMind a **library** (store + retrieve; meaning re-derived at query time), not a
+**compiler** (integrate each source into the existing knowledge; synthesis kept current).
+
+The gap — and the whole opportunity — is the **middle layer that gets rewritten as sources
+arrive**. We don't have it yet.
+
+| LLM Wiki layer | SuperMind today | Status |
+|---|---|---|
+| **Raw sources** (immutable) | `users/{uid}/saves` (link/note + extracted content) | ✅ |
+| **The wiki** (LLM-owned, interlinked synthesis) | — per-save summaries only, no cross-save synthesis | ❌ **the frontier** |
+| **The schema** (how to maintain) | — no per-user profile guiding enrichment | ⬜ cheap add |
+
+### 10.2 The three operations (our roadmap)
+
+**Ingest** ✅ *(exists, but stops at the save)* — enrich pipeline: extract → summarize →
+tag → embed. The LLM Wiki ingest "touches 10–15 pages"; ours touches 1. **Next: make ingest
+touch neighbors** (10.3-B).
+
+**Query** ⬜ *(unbuilt — "ask your brain")* — natural-language Q&A over the library. Key
+insight we were missing: **good answers get filed back as new saves**, so explorations
+compound instead of vanishing into chat. Article's scale note: at ~100 sources, feeding the
+LLM a **compact index** (titles + summaries) works "surprisingly well" and **avoids
+embedding-RAG infrastructure** — so Query does *not* require a Firestore vector index. We
+keep Gemini embeddings for the *map*; Query can be index-based.
+
+**Lint** ⬜ *(unbuilt — the differentiator)* — periodic health-check: contradictions between
+saves, stale claims superseded by newer sources, orphans (no similar neighbors), missing hub
+topics. Our GitHub Actions sweep already runs every 10 min — **Lint is a second mode for it**.
+
+### 10.3 Concrete build order (all reuse existing infra)
+
+| Step | Deliverable | Reuses |
+|---|---|---|
+| **B — Connection write-back** | On enrich, compute top-K neighbors and write a `connections` field ("extends X · same topic as Y") | graph API's cosine + top-K logic |
+| **B2 — Contradiction flagging** | When high-similarity neighbors make *differing* claims, Gemini flags → `contradictions` field | neighbor text already fetched at ingest; one extra Gemini call |
+| **C — Ask your brain (Query)** | Index-based Q&A (Gemini picks from titles+summaries list); answers savable as new nodes | Gemini; no vector index |
+| **D — Lint + log** | Sweep's second mode finds contradictions/stale/orphans; appends dated entries to `users/{uid}/log`; surfaces a "what changed" digest on Feed/Profile | existing sweep + GH Actions cron |
+| **E — Resurfacing** | Scheduled sweep surfaces forgotten-but-relevant saves (see Appendix B algorithm) | sweep |
+
+### 10.4 New data model additions (additive, no migration)
+
+| Field | Type | Written by | Feature |
+|---|---|---|---|
+| `connections` | array<`{id, relation, title}`> | enrich (B) | related-save write-back |
+| `contradictions` | array<`{id, note, title}`> | enrich (B2) / lint (D) | contradiction flagging |
+| `profile` (doc: `users/{uid}/meta/profile`) | `{ interests, projects, notes }` | user + LLM | schema layer — injected into enrich prompt so summaries are personal |
+| `log` (subcollection: `users/{uid}/log`) | `{ ts, kind, text }` append-only | ingest / lint | chronological "what changed" feed |
+
+### 10.5 Two constraints the article makes non-negotiable
+
+1. **Value only appears at ~50–100 sources.** A 5-node map/graph looks *broken*, not smart.
+   Onboarding should set the expectation; consider gating the map until there's density.
+2. **"A bad source touches 15 pages."** Once we write back synthesis, **deletion must
+   cascade** — deleting a save removes its vector *and* any `connections`/`contradictions`
+   that referenced it. Design the un-compile path from day one (tracked in `TODO.md`).
+
+### 10.6 What we deliberately DON'T take from LLM Wiki
+
+Obsidian / Web Clipper / Dataview / Marp / graph plugins, `qmd` and file-based search,
+local image-download hotkeys, and the one-at-a-time-human-reviews-every-edit ritual — all
+artifacts of a **manual markdown-vault** workflow. SuperMind is a real app with Firestore
+and its **own** graph view (the brain map *is* Obsidian's graph view). We take the
+**compile loop idea**, not the file metaphor. And we hold the line on **free + self-hosted**
+— we do not adopt the "requires a paid plan to be good" posture.
+
+### 10.7 The one-line version
+
+> Stop enriching saves in isolation. At ingest, use the neighbors we already compute to
+> write back **connections and contradictions**, and add a **Lint** mode to the sweep —
+> that's what turns the library into a compiler, using infrastructure that already exists.
 
