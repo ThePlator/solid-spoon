@@ -117,7 +117,7 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
   - [x] Wired into `enrichSave.ts` after the embedding is written (one-directional / approach A)
   - [x] **Connections section** on the web detail page (`item/[id]`) + styles
   - [x] `npm run connections:backfill` — populates the existing library; verified on production
-  - [ ] Surface connections on the **mobile** DetailScreen (parity)
+  - [x] Surface connections on the **mobile** DetailScreen (parity) — JS-only, ships via OTA
   - [ ] Run the full `connections:backfill` for the whole library
 - [x] **B2. Contradiction flagging — MVP SHIPPED** — the same enrich-time Gemini call that
       labels connections also flags any neighbor whose claims *directly contradict* the save
@@ -129,7 +129,7 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
   - [x] **⚠ Contradictions section** on the web detail page (danger-styled) + styles
   - [x] `connections:backfill` also writes contradictions
   - [x] Verified on production: seeded tabs-vs-spaces pair flagged (0.89 sim); unrelated pair not
-  - [ ] Surface contradictions on the **mobile** DetailScreen (parity, with B)
+  - [x] Surface contradictions on the **mobile** DetailScreen (parity, with B) — JS-only, ships via OTA
   - [ ] Optional: contradiction count on Profile + ⚠ badge on feed cards (retention hook)
 - [ ] **C. "Ask your brain" (Query)** — semantic Q&A. Per the LLM Wiki article, at personal
       scale feed Gemini a compact **index** of titles+summaries (no Firestore vector index

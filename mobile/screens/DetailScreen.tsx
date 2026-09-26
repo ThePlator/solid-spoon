@@ -162,6 +162,31 @@ export function DetailScreen() {
               {aiOnly.map((t) => <Text key={t} style={[s.tag, s.tagAi]}>✦{t}</Text>)}
             </View>
           ) : null}
+
+          {save.contradictions.length > 0 ? (
+            <View style={s.section}>
+              <Text style={[s.label, { color: C.danger }]}>⚠ Contradictions</Text>
+              {save.contradictions.map((c) => (
+                <TouchableOpacity key={c.id} style={s.contraRow} onPress={() => nav.push('Detail', { id: c.id })}>
+                  <Text style={s.contraTitle}>{c.title}</Text>
+                  <Text style={s.contraNote}>{c.note}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+
+          {save.connections.length > 0 ? (
+            <View style={s.section}>
+              <Text style={s.label}>Connections</Text>
+              {save.connections.map((c) => (
+                <TouchableOpacity key={c.id} style={s.connRow} onPress={() => nav.push('Detail', { id: c.id })}>
+                  <Text style={s.connRel}>{c.relation}</Text>
+                  <Text style={s.connTitle} numberOfLines={1}>{c.title}</Text>
+                  <Text style={s.connScore}>{Math.round(c.score * 100)}%</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
         </>
       )}
     </ScrollView>
@@ -191,4 +216,13 @@ const s = StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   tag: { color: C.fg3, fontSize: 13, fontFamily: 'monospace' },
   tagAi: { color: C.accent },
+  // connections (B) + contradictions (B2)
+  section: { marginTop: 22 },
+  connRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg2, borderColor: C.line, borderWidth: 1, borderRadius: RADIUS, padding: 12, marginBottom: 8 },
+  connRel: { color: C.accent, fontSize: 11, fontFamily: 'monospace', backgroundColor: 'rgba(204,255,0,0.12)', borderColor: '#33420a', borderWidth: 1, paddingHorizontal: 7, paddingVertical: 3, borderRadius: RADIUS, overflow: 'hidden' },
+  connTitle: { color: C.fg, fontSize: 14, flex: 1 },
+  connScore: { color: C.fg3, fontSize: 12, fontFamily: 'monospace' },
+  contraRow: { backgroundColor: 'rgba(255,95,86,0.07)', borderColor: 'rgba(255,95,86,0.4)', borderWidth: 1, borderLeftColor: C.danger, borderLeftWidth: 2, borderRadius: RADIUS, padding: 12, marginBottom: 8 },
+  contraTitle: { color: C.fg, fontSize: 14, fontWeight: '600', marginBottom: 3 },
+  contraNote: { color: C.fg2, fontSize: 13, lineHeight: 19 },
 });
