@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "enrich:pending": "node --env-file=.env.local scripts/enrich-pending.mjs",
-    "embed:backfill": "node --env-file=.env.local scripts/embed-backfill.mjs"
+    "embed:backfill": "node --env-file=.env.local scripts/embed-backfill.mjs",
+    "connections:backfill": "node --env-file=.env.local scripts/connections-backfill.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",

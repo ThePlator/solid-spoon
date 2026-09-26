@@ -108,9 +108,17 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
 > we *already compute* to write back connections + contradictions, and periodically
 > lint the whole library. We already have every piece (embeddings, neighbor search,
 > Gemini) — it's mostly wiring, not new infrastructure.
-- [ ] **B. Connection write-back (Ingest touches neighbors)** — on enrich, find top-K
-      neighbors (reuse graph logic) and write a short `connections` field
-      ("extends X · same topic as Y") onto the save. No new infra.
+- [x] **B. Connection write-back (Ingest touches neighbors) — MVP SHIPPED** — on enrich,
+      finds top-K neighbors (cosine, reuses graph thresholds) and writes a labeled
+      `connections` field onto the save; Gemini labels *how* they relate ("resource for",
+      "extends"…), degrading to cosine-only if the label call fails.
+  - [x] `SaveConnection` type + `connections` field on `Save` (`packages/core/src/types.ts`)
+  - [x] `web/lib/connections.ts` — `computeConnections` (neighbor search + Gemini labeling, never throws)
+  - [x] Wired into `enrichSave.ts` after the embedding is written (one-directional / approach A)
+  - [x] **Connections section** on the web detail page (`item/[id]`) + styles
+  - [x] `npm run connections:backfill` — populates the existing library; verified on production
+  - [ ] Surface connections on the **mobile** DetailScreen (parity)
+  - [ ] Run the full `connections:backfill` for the whole library
 - [ ] **B2. Contradiction flagging** — when high-similarity neighbors make *differing*
       claims, have Gemini flag it → `contradictions` field. The differentiator no other
       second-brain has. One extra Gemini call at ingest (neighbor text already in hand).

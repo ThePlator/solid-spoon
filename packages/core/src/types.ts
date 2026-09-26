@@ -20,6 +20,21 @@ export type SaveStatus = 'active' | 'pending' | 'error';
  */
 export type EnrichStatus = 'pending' | 'done' | 'error' | 'skipped';
 
+/**
+ * A related save discovered at enrich time (v2 — Feature B, "connection
+ * write-back"). Computed from embedding similarity, then labeled by the model.
+ */
+export interface SaveConnection {
+  /** The related save's id (path: users/{userId}/saves/{id}). */
+  id: string;
+  /** Denormalized title so the UI needn't fetch the related save. */
+  title: string;
+  /** Cosine similarity, 0–1. */
+  score: number;
+  /** Short model label for how this save relates to it, e.g. "extends". */
+  relation: string;
+}
+
 /** A single saved item. Firestore path: users/{userId}/saves/{id}. */
 export interface Save {
   id: string;
@@ -40,6 +55,8 @@ export interface Save {
   aiTags: string[];
   /** Enrichment lifecycle state (v2). */
   enrichStatus: EnrichStatus;
+  /** Related saves + how they relate, written at enrich time (v2 — Feature B). */
+  connections: SaveConnection[];
   /** When enrichment last completed (v2). */
   enrichedAt: Timestamp | null;
   createdAt: Timestamp | null;

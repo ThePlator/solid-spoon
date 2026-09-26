@@ -4,6 +4,7 @@ import { buildSearchTokens } from '@supermind/core';
 import { adminDb } from './firebaseAdmin';
 import { extractContent } from './extract';
 import { embedText, EMBED_MODEL } from './embed';
+import { computeConnections } from './connections';
 
 // Core enrichment step, reused by /api/enrich (per-save) and /api/enrich-sweep
 // (batch backstop). Reads a save, asks Gemini for a summary + tags, and writes
@@ -160,6 +161,15 @@ export async function enrichSave(
         dims: vec.length,
         at: FieldValue.serverTimestamp(),
       });
+
+      // Feature B: connection write-back. Uses the vector we just computed to
+      // find similar saves and label how they relate. Best-effort (never
+      // throws) — connections are additive and must not fail the enrich.
+      const connections = await computeConnections(userId, saveId, vec, {
+        title: d.title ?? '',
+        summary,
+      });
+      await ref.update({ connections });
     }
 
     return summary || tags.length ? 'done' : 'skipped';

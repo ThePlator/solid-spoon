@@ -186,6 +186,23 @@ export default function ItemPage() {
             </div>
           )}
 
+          {save.connections.length > 0 && (
+            <div className="detail-connections">
+              <span className="label">Connections</span>
+              <ul className="conn-list">
+                {save.connections.map((c) => (
+                  <li key={c.id}>
+                    <Link href={`/item/${c.id}`} className="conn-row">
+                      <span className="conn-rel">{c.relation}</span>
+                      <span className="conn-title">{c.title}</span>
+                      <span className="conn-score">{Math.round(c.score * 100)}%</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="detail-actions">
             <button className="primary" onClick={startEdit}>Edit</button>
             <button className="danger" style={{ marginLeft: 'auto' }} onClick={remove}>Remove entry</button>
