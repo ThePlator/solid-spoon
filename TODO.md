@@ -119,9 +119,18 @@ Current version: **0.2.0 — released** (web live on Vercel · mobile `v0.2.0` A
   - [x] `npm run connections:backfill` — populates the existing library; verified on production
   - [ ] Surface connections on the **mobile** DetailScreen (parity)
   - [ ] Run the full `connections:backfill` for the whole library
-- [ ] **B2. Contradiction flagging** — when high-similarity neighbors make *differing*
-      claims, have Gemini flag it → `contradictions` field. The differentiator no other
-      second-brain has. One extra Gemini call at ingest (neighbor text already in hand).
+- [x] **B2. Contradiction flagging — MVP SHIPPED** — the same enrich-time Gemini call that
+      labels connections also flags any neighbor whose claims *directly contradict* the save
+      → `contradictions` field. Conservative by design (higher 0.55 similarity floor + a
+      "most items don't contradict" prompt). **No extra API call** — merged into B's call.
+  - [x] `SaveContradiction` type + `contradictions` field on `Save` (core)
+  - [x] `computeConnections` returns `{ connections, contradictions }` (`web/lib/connections.ts`)
+  - [x] Wired into `enrichSave.ts` (one write with both)
+  - [x] **⚠ Contradictions section** on the web detail page (danger-styled) + styles
+  - [x] `connections:backfill` also writes contradictions
+  - [x] Verified on production: seeded tabs-vs-spaces pair flagged (0.89 sim); unrelated pair not
+  - [ ] Surface contradictions on the **mobile** DetailScreen (parity, with B)
+  - [ ] Optional: contradiction count on Profile + ⚠ badge on feed cards (retention hook)
 - [ ] **C. "Ask your brain" (Query)** — semantic Q&A. Per the LLM Wiki article, at personal
       scale feed Gemini a compact **index** of titles+summaries (no Firestore vector index
       needed) → it picks relevant saves → synthesizes an answer. Answers are **savable as

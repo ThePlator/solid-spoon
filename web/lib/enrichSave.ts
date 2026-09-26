@@ -162,14 +162,15 @@ export async function enrichSave(
         at: FieldValue.serverTimestamp(),
       });
 
-      // Feature B: connection write-back. Uses the vector we just computed to
-      // find similar saves and label how they relate. Best-effort (never
-      // throws) — connections are additive and must not fail the enrich.
-      const connections = await computeConnections(userId, saveId, vec, {
+      // Features B + B2: connection write-back and contradiction flagging. Uses
+      // the vector we just computed to find similar saves, then one Gemini call
+      // labels how they relate and flags any that directly conflict.
+      // Best-effort (never throws) — these are additive and must not fail the enrich.
+      const { connections, contradictions } = await computeConnections(userId, saveId, vec, {
         title: d.title ?? '',
         summary,
       });
-      await ref.update({ connections });
+      await ref.update({ connections, contradictions });
     }
 
     return summary || tags.length ? 'done' : 'skipped';

@@ -186,6 +186,22 @@ export default function ItemPage() {
             </div>
           )}
 
+          {save.contradictions.length > 0 && (
+            <div className="detail-contradictions">
+              <span className="label label-warn">⚠ Contradictions</span>
+              <ul className="conn-list">
+                {save.contradictions.map((c) => (
+                  <li key={c.id}>
+                    <Link href={`/item/${c.id}`} className="conn-row conn-row-warn">
+                      <span className="contra-title">{c.title}</span>
+                      <span className="contra-note">{c.note}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {save.connections.length > 0 && (
             <div className="detail-connections">
               <span className="label">Connections</span>

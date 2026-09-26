@@ -35,6 +35,20 @@ export interface SaveConnection {
   relation: string;
 }
 
+/**
+ * A saved item whose claims directly conflict with this one (v2 — Feature B2,
+ * "contradiction flagging"). Only genuinely opposing claims are recorded; a
+ * different topic or emphasis is not a contradiction.
+ */
+export interface SaveContradiction {
+  /** The conflicting save's id (path: users/{userId}/saves/{id}). */
+  id: string;
+  /** Denormalized title so the UI needn't fetch the conflicting save. */
+  title: string;
+  /** One-sentence description of the specific disagreement. */
+  note: string;
+}
+
 /** A single saved item. Firestore path: users/{userId}/saves/{id}. */
 export interface Save {
   id: string;
@@ -57,6 +71,8 @@ export interface Save {
   enrichStatus: EnrichStatus;
   /** Related saves + how they relate, written at enrich time (v2 — Feature B). */
   connections: SaveConnection[];
+  /** Saved items whose claims conflict with this one (v2 — Feature B2). */
+  contradictions: SaveContradiction[];
   /** When enrichment last completed (v2). */
   enrichedAt: Timestamp | null;
   createdAt: Timestamp | null;
